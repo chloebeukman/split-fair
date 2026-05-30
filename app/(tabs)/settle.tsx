@@ -1,9 +1,128 @@
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useApp, calculateBalances, calculateSettlements, CURRENCY_SYMBOLS } from '../../context/AppContext';
 
-export default function Settle() {
+export default function SettleScreen() {
+  const { people, expenses, currency } = useApp();
+  const sym = CURRENCY_SYMBOLS[currency];
+
+  const balances = calculateBalances(expenses, people);
+  const settlements = calculateSettlements(balances);
+
+  const getPerson = (id: string) => people.find(p => p.id === id);
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#1a1a2e', justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: 'white' }}>Settle</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.title}>Settle Up</Text>
+        <Text style={styles.subtitle}>Minimum transactions to clear all debts</Text>
+
+        {people.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="people-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No people added yet</Text>
+            <Text style={styles.emptyHint}>Add people and expenses to see settlements</Text>
+          </View>
+        ) : expenses.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="receipt-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No expenses yet</Text>
+            <Text style={styles.emptyHint}>Add expenses to calculate who owes what</Text>
+          </View>
+        ) : settlements.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="checkmark-circle-outline" size={48} color="#4ECDC4" />
+            <Text style={[styles.emptyText, { color: '#4ECDC4' }]}>All settled up!</Text>
+            <Text style={styles.emptyHint}>No payments needed</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.card}>
+              {settlements.map((settlement, index) => {
+                const from = getPerson(settlement.fromId);
+                const to = getPerson(settlement.toId);
+                if (!from || !to) return null;
+                return (
+                  <View key={index}>
+                    {index > 0 && <View style={styles.divider} />}
+                    <View style={styles.settlementRow}>
+                      <View style={styles.personSection}>
+                        <View style={[styles.dot, { backgroundColor: from.color }]} />
+                        <Text style={styles.personName}>{from.name}</Text>
+                      </View>
+                      <View style={styles.arrowSection}>
+                        <Text style={styles.amount}>{sym}{settlement.amount.toFixed(2)}</Text>
+                        <Ionicons name="arrow-forward" size={16} color="#7C3AED" />
+                      </View>
+                      <View style={styles.personSection}>
+                        <View style={[styles.dot, { backgroundColor: to.color }]} />
+                        <Text style={styles.personName}>{to.name}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Balances Summary */}
+            <Text style={styles.sectionTitle}>Individual Balances</Text>
+            <View style={styles.card}>
+              {people.map((person, index) => {
+                const balance = balances[person.id] ?? 0;
+                return (
+                  <View key={person.id}>
+                    {index > 0 && <View style={styles.divider} />}
+                    <View style={styles.balanceRow}>
+                      <View style={[styles.dot, { backgroundColor: person.color }]} />
+                      <Text style={styles.personName}>{person.name}</Text>
+                      <View style={styles.balanceRight}>
+                        <Text style={[styles.balanceAmount, { color: balance >= 0 ? '#4ECDC4' : '#FF6B6B' }]}>
+                          {balance >= 0 ? '+' : ''}{sym}{balance.toFixed(2)}
+                        </Text>
+                        <Text style={styles.balanceStatus}>
+                          {Math.abs(balance) < 0.01 ? 'settled' : balance > 0 ? 'gets back' : 'owes'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  scroll: { padding: 20, paddingBottom: 60 },
+  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginTop: 20 },
+  subtitle: { fontSize: 14, color: '#888', marginBottom: 24 },
+  emptyCard: {
+    backgroundColor: '#16213e', borderRadius: 16, padding: 40,
+    alignItems: 'center', gap: 8,
+  },
+  emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
+  emptyHint: { color: '#555', fontSize: 13, textAlign: 'center' },
+  card: { backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: 'white', marginBottom: 12 },
+  settlementRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', padding: 16,
+  },
+  personSection: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  arrowSection: { alignItems: 'center', gap: 4, paddingHorizontal: 8 },
+  amount: { color: '#7C3AED', fontWeight: '700', fontSize: 14 },
+  personName: { color: 'white', fontSize: 15 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  divider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 12 },
+  balanceRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, padding: 16,
+  },
+  balanceRight: { marginLeft: 'auto', alignItems: 'flex-end' },
+  balanceAmount: { fontSize: 15, fontWeight: '600' },
+  balanceStatus: { fontSize: 11, color: '#555', marginTop: 2 },
+});
