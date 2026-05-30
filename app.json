@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "splitfair",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -40,9 +40,6 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+    "experiments": {}
   }
 }
