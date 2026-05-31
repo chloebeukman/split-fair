@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // --- TYPES ---
 export type Currency = 'ZAR' | 'USD' | 'EUR' | 'GBP';
@@ -20,7 +21,7 @@ export type ExpenseItem = {
   id: string;
   name: string;
   amount: number;
-  splitBetween: string[]; // person IDs
+  splitBetween: string[];
 };
 
 export type Expense = {
@@ -28,7 +29,7 @@ export type Expense = {
   title: string;
   items: ExpenseItem[];
   tipPercent: number;
-  paidById: string; // person ID
+  paidById: string;
   date: string;
 };
 
@@ -51,10 +52,8 @@ export function calculateBalances(
     const total = subtotal * (1 + expense.tipPercent / 100);
     const tipMultiplier = 1 + expense.tipPercent / 100;
 
-    // Payer is credited the full total
     balances[expense.paidById] += total;
 
-    // Each item is debited to the people it's split between
     expense.items.forEach(item => {
       if (item.splitBetween.length === 0) return;
       const share = (item.amount * tipMultiplier) / item.splitBetween.length;
@@ -103,14 +102,22 @@ export function calculateSettlements(
   return settlements;
 }
 
+// --- STORAGE KEYS ---
+const KEYS = {
+  people: 'splitfair_people',
+  expenses: 'splitfair_expenses',
+  currency: 'splitfair_currency',
+};
+
 // --- CONTEXT ---
 type AppContextType = {
   people: Person[];
   expenses: Expense[];
   currency: Currency;
+  isLoading: boolean;
   setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
-  setCurrency: React.Dispatch<React.SetStateAction<Currency>>;
+  setCurrency: (currency: Currency) => void;
   addPerson: (name: string) => void;
   removePerson: (id: string) => void;
   addExpense: (expense: Expense) => void;
@@ -127,7 +134,41 @@ const PERSON_COLORS = [
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [currency, setCurrency] = useState<Currency>('ZAR');
+  const [currency, setCurrencyState] = useState<Currency>('ZAR');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load data on startup
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [storedPeople, storedExpenses, storedCurrency] = await Promise.all([
+          AsyncStorage.getItem(KEYS.people),
+          AsyncStorage.getItem(KEYS.expenses),
+          AsyncStorage.getItem(KEYS.currency),
+        ]);
+        if (storedPeople) setPeople(JSON.parse(storedPeople));
+        if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
+        if (storedCurrency) setCurrencyState(storedCurrency as Currency);
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  // Save people whenever they change
+  useEffect(() => {
+    if (isLoading) return;
+    AsyncStorage.setItem(KEYS.people, JSON.stringify(people));
+  }, [people, isLoading]);
+
+  // Save expenses whenever they change
+  useEffect(() => {
+    if (isLoading) return;
+    AsyncStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
+  }, [expenses, isLoading]);
 
   const addPerson = (name: string) => {
     const id = Date.now().toString();
@@ -147,9 +188,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
+  const setCurrency = async (c: Currency) => {
+    setCurrencyState(c);
+    await AsyncStorage.setItem(KEYS.currency, c);
+  };
+
   return (
     <AppContext.Provider value={{
-      people, expenses, currency,
+      people, expenses, currency, isLoading,
       setPeople, setExpenses, setCurrency,
       addPerson, removePerson, addExpense, removeExpense,
     }}>
