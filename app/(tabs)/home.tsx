@@ -1,18 +1,19 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp, calculateBalances, calculateSettlements, CURRENCY_SYMBOLS } from '../../context/AppContext';
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { calculateBalances, calculateSettlements, CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
 
 export default function HomeScreen() {
-  const { people, expenses, currency } = useApp();
+  const { people, expenses, currency, currentUserId } = useApp();
   const router = useRouter();
   const sym = CURRENCY_SYMBOLS[currency];
 
   const balances = calculateBalances(expenses, people);
   const settlements = calculateSettlements(balances);
 
-  const totalOwed = Object.values(balances).filter(b => b < 0).reduce((sum, b) => sum + Math.abs(b), 0);
-  const totalOwedToYou = Object.values(balances).filter(b => b > 0).reduce((sum, b) => sum + b, 0);
+  const userBalance = currentUserId ? (balances[currentUserId] ?? 0) : 0;
+  const totalOwed = userBalance < 0 ? Math.abs(userBalance) : 0;
+  const totalOwedToYou = userBalance > 0 ? userBalance : 0;
 
   return (
     <View style={styles.container}>

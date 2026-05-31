@@ -107,6 +107,7 @@ const KEYS = {
   people: 'splitfair_people',
   expenses: 'splitfair_expenses',
   currency: 'splitfair_currency',
+  currentUserId: 'splitfair_current_user',
 };
 
 // --- CONTEXT ---
@@ -115,6 +116,8 @@ type AppContextType = {
   expenses: Expense[];
   currency: Currency;
   isLoading: boolean;
+  currentUserId: string | null;
+  setCurrentUserId: (id: string | null) => void;
   setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   setCurrency: (currency: Currency) => void;
@@ -136,6 +139,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [currency, setCurrencyState] = useState<Currency>('ZAR');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
 
   // Load data on startup
   useEffect(() => {
@@ -166,9 +170,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Save expenses whenever they change
   useEffect(() => {
-    if (isLoading) return;
-    AsyncStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
-  }, [expenses, isLoading]);
+    const load = async () => {
+      try {
+        const [storedPeople, storedExpenses, storedCurrency, storedCurrentUser] = await Promise.all([
+          AsyncStorage.getItem(KEYS.people),
+          AsyncStorage.getItem(KEYS.expenses),
+          AsyncStorage.getItem(KEYS.currency),
+          AsyncStorage.getItem(KEYS.currentUserId),
+        ]);
+        if (storedPeople) setPeople(JSON.parse(storedPeople));
+        if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
+        if (storedCurrency) setCurrencyState(storedCurrency as Currency);
+        if (storedCurrentUser) setCurrentUserIdState(storedCurrentUser);
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const addPerson = (name: string) => {
     const id = Date.now().toString();
@@ -193,11 +214,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(KEYS.currency, c);
   };
 
+  const setCurrentUserId = async (id: string | null) => {
+  setCurrentUserIdState(id);
+  if (id) await AsyncStorage.setItem(KEYS.currentUserId, id);
+  else await AsyncStorage.removeItem(KEYS.currentUserId);
+  };
+
   return (
     <AppContext.Provider value={{
       people, expenses, currency, isLoading,
       setPeople, setExpenses, setCurrency,
       addPerson, removePerson, addExpense, removeExpense,
+      currentUserId, setCurrentUserId,
     }}>
       {children}
     </AppContext.Provider>
