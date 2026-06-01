@@ -1,5 +1,5 @@
 # Split Fair
-#### Video Demo: <(https://youtu.be/XhXqkSy7Oqo?si=b8x6Ej6uCVsGd6tW)>
+#### Video Demo: <[URL HERE](https://youtu.be/XhXqkSy7Oqo?si=b8x6Ej6uCVsGd6tW)>
 #### Description:
 
 ## What is Split Fair?
