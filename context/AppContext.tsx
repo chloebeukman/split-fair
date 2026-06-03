@@ -108,6 +108,7 @@ const KEYS = {
   expenses: 'splitfair_expenses',
   currency: 'splitfair_currency',
   currentUserId: 'splitfair_current_user',
+  hasOnboarded: 'splitfair_has_onboarded',
 };
 
 // --- CONTEXT ---
@@ -125,6 +126,8 @@ type AppContextType = {
   removePerson: (id: string) => void;
   addExpense: (expense: Expense) => void;
   removeExpense: (id: string) => void;
+  hasOnboarded: boolean;
+  setHasOnboarded: (value: boolean) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -140,19 +143,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currency, setCurrencyState] = useState<Currency>('ZAR');
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
+  const [hasOnboarded, setHasOnboardedState] = useState(false);
 
   // Load data on startup
   useEffect(() => {
     const load = async () => {
       try {
-        const [storedPeople, storedExpenses, storedCurrency] = await Promise.all([
+        const [storedPeople, storedExpenses, storedCurrency, storedCurrentUser, storedHasOnboarded] = await Promise.all([
           AsyncStorage.getItem(KEYS.people),
           AsyncStorage.getItem(KEYS.expenses),
           AsyncStorage.getItem(KEYS.currency),
+          AsyncStorage.getItem(KEYS.currentUserId),
+          AsyncStorage.getItem(KEYS.hasOnboarded),
         ]);
         if (storedPeople) setPeople(JSON.parse(storedPeople));
         if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
         if (storedCurrency) setCurrencyState(storedCurrency as Currency);
+        if (storedCurrentUser) setCurrentUserIdState(storedCurrentUser);
+        if (storedHasOnboarded) setHasOnboardedState(storedHasOnboarded === 'true');
       } catch (e) {
         console.error('Failed to load data:', e);
       } finally {
@@ -168,28 +176,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(KEYS.people, JSON.stringify(people));
   }, [people, isLoading]);
 
-  // Save expenses whenever they change
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [storedPeople, storedExpenses, storedCurrency, storedCurrentUser] = await Promise.all([
-          AsyncStorage.getItem(KEYS.people),
-          AsyncStorage.getItem(KEYS.expenses),
-          AsyncStorage.getItem(KEYS.currency),
-          AsyncStorage.getItem(KEYS.currentUserId),
-        ]);
-        if (storedPeople) setPeople(JSON.parse(storedPeople));
-        if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
-        if (storedCurrency) setCurrencyState(storedCurrency as Currency);
-        if (storedCurrentUser) setCurrentUserIdState(storedCurrentUser);
-      } catch (e) {
-        console.error('Failed to load data:', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, []);
+    if (isLoading) return;
+    AsyncStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
+  }, [expenses, isLoading]);
+  
+  const setHasOnboarded = async (value: boolean) => {
+    setHasOnboardedState(value);
+    await AsyncStorage.setItem(KEYS.hasOnboarded, value.toString());
+  };
 
   const addPerson = (name: string) => {
     const id = Date.now().toString();
@@ -225,7 +220,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       people, expenses, currency, isLoading,
       setPeople, setExpenses, setCurrency,
       addPerson, removePerson, addExpense, removeExpense,
-      currentUserId, setCurrentUserId,
+      currentUserId, setCurrentUserId, hasOnboarded, setHasOnboarded,
     }}>
       {children}
     </AppContext.Provider>
