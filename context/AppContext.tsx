@@ -128,6 +128,7 @@ type AppContextType = {
   removeExpense: (id: string) => void;
   hasOnboarded: boolean;
   setHasOnboarded: (value: boolean) => void;
+  updateExpense: (expense: Expense) => void;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -144,7 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboardedState] = useState(false);
-
+  
   // Load data on startup
   useEffect(() => {
     const load = async () => {
@@ -175,7 +176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
     AsyncStorage.setItem(KEYS.people, JSON.stringify(people));
   }, [people, isLoading]);
-
+  
   useEffect(() => {
     if (isLoading) return;
     AsyncStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
@@ -204,6 +205,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setExpenses(prev => prev.filter(e => e.id !== id));
   };
 
+  const updateExpense = (expense: Expense) => {
+  setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
+};
+
   const setCurrency = async (c: Currency) => {
     setCurrencyState(c);
     await AsyncStorage.setItem(KEYS.currency, c);
@@ -219,7 +224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       people, expenses, currency, isLoading,
       setPeople, setExpenses, setCurrency,
-      addPerson, removePerson, addExpense, removeExpense,
+      addPerson, removePerson, addExpense, removeExpense, updateExpense,
       currentUserId, setCurrentUserId, hasOnboarded, setHasOnboarded,
     }}>
       {children}

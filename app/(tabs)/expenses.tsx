@@ -1,10 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp, calculateBalances, CURRENCY_SYMBOLS } from '../../context/AppContext';
+import { useRouter } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
 
 export default function ExpensesScreen() {
   const { expenses, people, currency, removeExpense } = useApp();
   const sym = CURRENCY_SYMBOLS[currency];
+  const router = useRouter();
 
   const handleRemove = (id: string, title: string) => {
     Alert.alert(
@@ -46,12 +48,20 @@ export default function ExpensesScreen() {
                     <Text style={styles.expenseTitle}>{expense.title}</Text>
                     <Text style={styles.expenseMeta}>{date} · Paid by {payer?.name ?? 'Unknown'}</Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => handleRemove(expense.id, expense.title)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/expense/edit?id=${expense.id}`)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="pencil-outline" size={18} color="#4ECDC4" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleRemove(expense.id, expense.title)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Items */}
