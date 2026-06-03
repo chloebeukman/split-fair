@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CURRENCY_SYMBOLS, Currency, useApp } from '../../context/AppContext';
 
 export default function SettingsScreen() {
-  const { people, currentUserId, setCurrentUserId, currency, setCurrency } = useApp();
-
+  
+  const { people, currentUserId, setCurrentUserId, currency, setCurrency, setPeople, setExpenses } = useApp();
   const currencies: Currency[] = ['ZAR', 'USD', 'EUR', 'GBP'];
 
   return (
@@ -65,7 +65,7 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* Clear Data */}
+        {/* Danger Zone */}
         <Text style={styles.sectionTitle}>Danger Zone</Text>
         <View style={styles.card}>
           <TouchableOpacity
@@ -74,6 +74,32 @@ export default function SettingsScreen() {
           >
             <Ionicons name="person-remove-outline" size={20} color="#FF6B6B" />
             <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Clear "who am I" selection</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => {
+              Alert.alert(
+                'Start Fresh',
+                'This will delete all people, expenses and settings. This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Reset Everything',
+                    style: 'destructive',
+                    onPress: () => {
+                      setPeople([]);
+                      setExpenses([]);
+                      setCurrency('ZAR');
+                      setCurrentUserId(null);
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+            <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Start Fresh (reset everything)</Text>
           </TouchableOpacity>
         </View>
 
