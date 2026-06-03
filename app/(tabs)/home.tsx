@@ -40,10 +40,47 @@ export default function HomeScreen() {
         {/* Balances */}
         <Text style={styles.sectionTitle}>Balances</Text>
         {people.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No people added yet.</Text>
-            <Text style={styles.emptyHint}>Go to the People tab to get started.</Text>
-          </View>
+          <View style={styles.gettingStarted}>
+            <Text style={styles.gettingStartedTitle}>Get Started in 3 Steps</Text>
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/people')}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Add your group</Text>
+                <Text style={styles.stepHint}>Add everyone splitting expenses</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+
+            <View style={styles.stepDivider} />
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/settings')}>
+              <View style={[styles.stepNumber, { backgroundColor: '#4ECDC422', borderColor: '#4ECDC4' }]}>
+                <Text style={[styles.stepNumberText, { color: '#4ECDC4' }]}>2</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Select yourself</Text>
+                <Text style={styles.stepHint}>So the app knows your balance</Text>
+              </View>
+            <Ionicons name="chevron-forward" size={18} color="#555" />
+          </TouchableOpacity>
+
+          <View style={styles.stepDivider} />
+
+          <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/expense/new')}>
+            <View style={[styles.stepNumber, { backgroundColor: '#FF6B9D22', borderColor: '#FF6B9D' }]}>
+              <Text style={[styles.stepNumberText, { color: '#FF6B9D' }]}>3</Text>
+            </View>
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Add your first expense</Text>
+              <Text style={styles.stepHint}>Split a bill between your group</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#555" />
+          </TouchableOpacity>
+        </View>
+
         ) : (
           <View style={styles.card}>
             {people.map(person => {
@@ -134,4 +171,26 @@ const styles = StyleSheet.create({
     shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
+
+  gettingStarted: {
+    backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24,
+  },
+  gettingStartedTitle: {
+    fontSize: 14, fontWeight: '600', color: '#888',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
+  },
+  stepButton: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, padding: 16,
+  },
+  stepNumber: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#7C3AED22', borderWidth: 1, borderColor: '#7C3AED',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  stepNumberText: { color: '#7C3AED', fontWeight: '700', fontSize: 14 },
+  stepContent: { flex: 1 },
+  stepTitle: { color: 'white', fontSize: 15, fontWeight: '500' },
+  stepHint: { color: '#888', fontSize: 12, marginTop: 2 },
+  stepDivider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 16 },
 });
