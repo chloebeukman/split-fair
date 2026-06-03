@@ -1,10 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
-import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 
 export default function PeopleScreen() {
   const { people, addPerson, removePerson } = useApp();
+  const router = useRouter();
   const [name, setName] = useState('');
 
   const handleAdd = () => {
@@ -82,6 +84,23 @@ export default function PeopleScreen() {
           💡 Tip: Add everyone before creating expenses. Colors are assigned automatically.
         </Text>
 
+        {people.length > 0 && (
+          <View style={styles.nextSteps}>
+            <Text style={styles.nextStepsTitle}>Ready to go?</Text>
+            <TouchableOpacity style={styles.nextStepButton} onPress={() => router.push('/settings')}>
+              <Ionicons name="person-circle-outline" size={20} color="#4ECDC4" />
+              <Text style={styles.nextStepText}>Select who you are in Settings</Text>
+              <Ionicons name="chevron-forward" size={16} color="#555" />
+            </TouchableOpacity>
+            <View style={styles.nextStepDivider} />
+            <TouchableOpacity style={styles.nextStepButton} onPress={() => router.push('/expense/new')}>
+              <Ionicons name="add-circle-outline" size={20} color="#7C3AED" />
+              <Text style={styles.nextStepText}>Add your first expense</Text>
+              <Ionicons name="chevron-forward" size={16} color="#555" />
+            </TouchableOpacity>
+          </View>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -117,4 +136,19 @@ const styles = StyleSheet.create({
   emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
   emptyHint: { color: '#555', fontSize: 13 },
   tip: { color: '#555', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+
+  nextSteps: {
+    backgroundColor: '#16213e', borderRadius: 16,
+    padding: 8, marginTop: 16,
+  },
+  nextStepsTitle: {
+    fontSize: 14, fontWeight: '600', color: '#888',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
+  },
+  nextStepButton: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, padding: 16,
+  },
+  nextStepText: { flex: 1, color: 'white', fontSize: 15 },
+  nextStepDivider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 16 },
 });
