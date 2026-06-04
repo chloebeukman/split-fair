@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp, calculateBalances, calculateSettlements, CURRENCY_SYMBOLS } from '../../context/AppContext';
 
@@ -11,11 +11,53 @@ export default function SettleScreen() {
 
   const getPerson = (id: string) => people.find(p => p.id === id);
 
+  const handleShare = async () => {
+  if (settlements.length === 0) return;
+
+  const lines: string[] = [];
+  lines.push('💸 Split Fair — Settle Up Summary');
+  lines.push('');
+
+  settlements.forEach(s => {
+    const from = getPerson(s.fromId);
+    const to = getPerson(s.toId);
+    if (from && to) {
+      lines.push(`${from.name} owes ${to.name} ${sym}${s.amount.toFixed(2)}`);
+    }
+  });
+
+  lines.push('');
+  lines.push('Individual balances:');
+  people.forEach(person => {
+    const balance = balances[person.id] ?? 0;
+    const status = Math.abs(balance) < 0.01
+      ? 'settled up ✅'
+      : balance > 0
+        ? `gets back ${sym}${balance.toFixed(2)}`
+        : `owes ${sym}${Math.abs(balance).toFixed(2)}`;
+    lines.push(`${person.name}: ${status}`);
+  });
+
+  lines.push('');
+  lines.push('Shared via Split Fair');
+
+  await Share.share({ message: lines.join('\n') });
+};
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Settle Up</Text>
-        <Text style={styles.subtitle}>Minimum transactions to clear all debts</Text>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={styles.title}>Settle Up</Text>
+            <Text style={styles.subtitle}>Minimum transactions to clear all debts</Text>
+          </View>
+          {settlements.length > 0 && (
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Ionicons name="share-outline" size={20} color="#7C3AED" />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {people.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -99,7 +141,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   scroll: { padding: 20, paddingBottom: 60 },
   title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginTop: 20 },
-  subtitle: { fontSize: 14, color: '#888', marginBottom: 24 },
+  subtitle: { fontSize: 14, color: '#888' },
+  titleRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 24,
+  },
+  shareButton: {
+    backgroundColor: '#7C3AED22', borderRadius: 12,
+    padding: 10, borderWidth: 1, borderColor: '#7C3AED',
+    marginTop: 20,
+  },
   emptyCard: {
     backgroundColor: '#16213e', borderRadius: 16, padding: 40,
     alignItems: 'center', gap: 8,
