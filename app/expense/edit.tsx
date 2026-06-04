@@ -5,21 +5,26 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { CURRENCY_SYMBOLS, Expense, ExpenseItem, useApp } from '../../context/AppContext';
 
 export default function EditExpenseScreen() {
-  const { people, expenses, updateExpense, currency } = useApp();
+  const { activeGroup, updateExpense } = useApp();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centered}>
+          <Text style={styles.emptyText}>No group selected.</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const { people, currency } = activeGroup;
   const sym = CURRENCY_SYMBOLS[currency];
-
-  const existing = expenses.find(e => e.id === id);
-
-  const [title, setTitle] = useState(existing?.title ?? '');
-  const [tipPercent, setTipPercent] = useState(existing?.tipPercent ?? 0);
-  const [customTip, setCustomTip] = useState('');
-  const [showCustomTip, setShowCustomTip] = useState(
-    existing ? ![0, 10, 15, 20].includes(existing.tipPercent) : false
-  );
-  const [paidById, setPaidById] = useState(existing?.paidById ?? people[0]?.id ?? '');
-  const [items, setItems] = useState<ExpenseItem[]>(existing?.items ?? []);
+  const existing = activeGroup.expenses.find(e => e.id === id);
 
   if (!existing) {
     return (
@@ -33,6 +38,27 @@ export default function EditExpenseScreen() {
       </View>
     );
   }
+
+  return (
+    <EditExpenseForm
+      existing={existing}
+      people={people}
+      sym={sym}
+      updateExpense={updateExpense}
+      router={router}
+    />
+  );
+}
+
+function EditExpenseForm({ existing, people, sym, updateExpense, router }: any) {
+  const [title, setTitle] = useState(existing.title);
+  const [tipPercent, setTipPercent] = useState(existing.tipPercent);
+  const [customTip, setCustomTip] = useState('');
+  const [showCustomTip, setShowCustomTip] = useState(
+    ![0, 10, 15, 20].includes(existing.tipPercent)
+  );
+  const [paidById, setPaidById] = useState(existing.paidById);
+  const [items, setItems] = useState<ExpenseItem[]>(existing.items);
 
   const updateItem = (id: string, field: 'name' | 'amount', value: string) => {
     setItems(prev => prev.map(item => {
@@ -61,7 +87,7 @@ export default function EditExpenseScreen() {
       id: Date.now().toString() + Math.random(),
       name: '',
       amount: 0,
-      splitBetween: people.map(p => p.id),
+      splitBetween: people.map((p: any) => p.id),
     }]);
   };
 
@@ -99,8 +125,6 @@ export default function EditExpenseScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="white" />
@@ -109,7 +133,6 @@ export default function EditExpenseScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Title */}
         <Text style={styles.label}>Expense Name</Text>
         <TextInput
           style={styles.input}
@@ -119,9 +142,8 @@ export default function EditExpenseScreen() {
           onChangeText={setTitle}
         />
 
-        {/* Items */}
         <Text style={styles.label}>Items</Text>
-        {items.map((item, index) => (
+        {items.map((item: ExpenseItem, index: number) => (
           <View key={item.id} style={styles.itemCard}>
             <View style={styles.itemRow}>
               <TextInput
@@ -148,10 +170,9 @@ export default function EditExpenseScreen() {
                 </TouchableOpacity>
               )}
             </View>
-
             <Text style={styles.splitLabel}>Split between:</Text>
             <View style={styles.peopleRow}>
-              {people.map(person => {
+              {people.map((person: any) => {
                 const selected = item.splitBetween.includes(person.id);
                 return (
                   <TouchableOpacity
@@ -173,13 +194,11 @@ export default function EditExpenseScreen() {
           <Text style={styles.addItemText}>Add another item</Text>
         </TouchableOpacity>
 
-        {/* Subtotal */}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal</Text>
           <Text style={styles.totalValue}>{sym}{subtotal.toFixed(2)}</Text>
         </View>
 
-        {/* Tip */}
         <Text style={styles.label}>Tip</Text>
         <View style={styles.tipRow}>
           {[10, 15, 20].map(pct => (
@@ -212,16 +231,14 @@ export default function EditExpenseScreen() {
           />
         )}
 
-        {/* Total */}
         <View style={[styles.totalRow, { marginTop: 8 }]}>
           <Text style={[styles.totalLabel, { fontSize: 18 }]}>Total</Text>
           <Text style={[styles.totalValue, { fontSize: 20, color: '#4ECDC4' }]}>{sym}{total.toFixed(2)}</Text>
         </View>
 
-        {/* Paid By */}
         <Text style={styles.label}>Paid by</Text>
         <View style={styles.card}>
-          {people.map(person => (
+          {people.map((person: any) => (
             <TouchableOpacity
               key={person.id}
               style={[styles.paidByRow, paidById === person.id && styles.paidByRowActive]}
@@ -238,7 +255,6 @@ export default function EditExpenseScreen() {
 
       </ScrollView>
 
-      {/* Save Button */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
@@ -285,7 +301,7 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#1a1a2e' },
   saveButton: { backgroundColor: '#7C3AED', borderRadius: 16, padding: 18, alignItems: 'center' },
   saveButtonText: { color: 'white', fontSize: 17, fontWeight: '700' },
-  emptyText: { color: '#888', fontSize: 16 },
+  emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
   backButton: { marginTop: 16, backgroundColor: '#7C3AED', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   backButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
 });

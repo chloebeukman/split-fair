@@ -5,9 +5,11 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { useApp } from '../../context/AppContext';
 
 export default function PeopleScreen() {
-  const { people, addPerson, removePerson } = useApp();
+  const { activeGroup, addPerson, removePerson } = useApp();
   const router = useRouter();
   const [name, setName] = useState('');
+
+  const people = activeGroup?.people ?? [];
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -31,11 +33,23 @@ export default function PeopleScreen() {
     );
   };
 
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyCard}>
+          <Ionicons name="people-outline" size={48} color="#444" />
+          <Text style={styles.emptyText}>No group selected</Text>
+          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>People</Text>
-        <Text style={styles.subtitle}>Add everyone splitting expenses</Text>
+        <Text style={styles.subtitle}>Add everyone splitting expenses in {activeGroup.name}</Text>
 
         {/* Add Person Input */}
         <View style={styles.inputRow}>
@@ -136,7 +150,6 @@ const styles = StyleSheet.create({
   emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
   emptyHint: { color: '#555', fontSize: 13 },
   tip: { color: '#555', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-
   nextSteps: {
     backgroundColor: '#16213e', borderRadius: 16,
     padding: 8, marginTop: 16,

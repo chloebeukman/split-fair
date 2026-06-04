@@ -4,9 +4,23 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
 
 export default function ExpensesScreen() {
-  const { expenses, people, currency, removeExpense } = useApp();
-  const sym = CURRENCY_SYMBOLS[currency];
+  const { activeGroup, removeExpense } = useApp();
   const router = useRouter();
+
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyCard}>
+          <Ionicons name="receipt-outline" size={48} color="#444" />
+          <Text style={styles.emptyText}>No group selected</Text>
+          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { expenses, people, currency } = activeGroup;
+  const sym = CURRENCY_SYMBOLS[currency];
 
   const handleRemove = (id: string, title: string) => {
     Alert.alert(
@@ -42,7 +56,6 @@ export default function ExpensesScreen() {
 
             return (
               <View key={expense.id} style={styles.card}>
-                {/* Card Header */}
                 <View style={styles.cardHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.expenseTitle}>{expense.title}</Text>
@@ -64,7 +77,6 @@ export default function ExpensesScreen() {
                   </View>
                 </View>
 
-                {/* Items */}
                 {expense.items.map(item => {
                   const itemPeople = people.filter(p => item.splitBetween.includes(p.id));
                   return (
@@ -85,7 +97,6 @@ export default function ExpensesScreen() {
                   );
                 })}
 
-                {/* Tip and Total */}
                 {expense.tipPercent > 0 && (
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>Tip ({expense.tipPercent}%)</Text>

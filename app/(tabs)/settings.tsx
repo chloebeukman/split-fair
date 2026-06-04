@@ -3,14 +3,34 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { CURRENCY_SYMBOLS, Currency, useApp } from '../../context/AppContext';
 
 export default function SettingsScreen() {
-  
-  const { people, currentUserId, setCurrentUserId, currency, setCurrency, setPeople, setExpenses } = useApp();
+  const {
+    activeGroup,
+    setCurrency,
+    setCurrentUserId,
+    resetActiveGroup,
+  } = useApp();
+
   const currencies: Currency[] = ['ZAR', 'USD', 'EUR', 'GBP'];
+
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyCard}>
+          <Ionicons name="settings-outline" size={48} color="#444" />
+          <Text style={styles.emptyText}>No group selected</Text>
+          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { people, currentUserId, currency } = activeGroup;
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Settings</Text>
+        <Text style={styles.groupName}>Group: {activeGroup.name}</Text>
 
         {/* Who Am I */}
         <Text style={styles.sectionTitle}>Who am I?</Text>
@@ -45,7 +65,7 @@ export default function SettingsScreen() {
         {/* Currency */}
         <Text style={styles.sectionTitle}>Currency</Text>
         <Text style={styles.sectionHint}>
-          Choose your preferred currency for display
+          Choose your preferred currency for this group
         </Text>
         <View style={styles.card}>
           {currencies.map((c, index) => (
@@ -80,26 +100,21 @@ export default function SettingsScreen() {
             style={styles.row}
             onPress={() => {
               Alert.alert(
-                'Start Fresh',
-                'This will delete all people, expenses and settings. This cannot be undone.',
+                'Reset Group',
+                `This will delete all people and expenses in "${activeGroup.name}". This cannot be undone.`,
                 [
                   { text: 'Cancel', style: 'cancel' },
                   {
-                    text: 'Reset Everything',
+                    text: 'Reset',
                     style: 'destructive',
-                    onPress: () => {
-                      setPeople([]);
-                      setExpenses([]);
-                      setCurrency('ZAR');
-                      setCurrentUserId(null);
-                    },
+                    onPress: resetActiveGroup,
                   },
                 ]
               );
             }}
           >
             <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-            <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Start Fresh (reset everything)</Text>
+            <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Reset this group</Text>
           </TouchableOpacity>
         </View>
 
@@ -111,7 +126,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   scroll: { padding: 20, paddingBottom: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginTop: 20, marginBottom: 24 },
+  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginTop: 20, marginBottom: 4 },
+  groupName: { fontSize: 14, color: '#7C3AED', marginBottom: 24, fontWeight: '500' },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: 'white', marginBottom: 6, marginTop: 8 },
   sectionHint: { fontSize: 13, color: '#555', marginBottom: 12 },
   card: { backgroundColor: '#16213e', borderRadius: 16, overflow: 'hidden', marginBottom: 24 },

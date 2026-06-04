@@ -1,16 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { calculateBalances, calculateSettlements, CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
+import { CURRENCY_SYMBOLS, calculateBalances, calculateSettlements, useApp } from '../../context/AppContext';
 
 export default function HomeScreen() {
-  const { people, expenses, currency, currentUserId } = useApp();
+  const { groups, activeGroup, activeGroupId } = useApp();
   const router = useRouter();
-  const sym = CURRENCY_SYMBOLS[currency];
 
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.appTitle}>Split Fair</Text>
+          <Text style={styles.appSubtitle}>Group expense tracking made simple</Text>
+          <View style={styles.emptyCard}>
+            <Ionicons name="people-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No groups yet</Text>
+            <Text style={styles.emptyHint}>Create a group to get started</Text>
+            <TouchableOpacity style={styles.createGroupButton} onPress={() => router.push('/groups')}>
+              <Text style={styles.createGroupButtonText}>Create a Group</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  const { people, expenses, currency, currentUserId } = activeGroup;
+  const sym = CURRENCY_SYMBOLS[currency];
   const balances = calculateBalances(expenses, people);
   const settlements = calculateSettlements(balances);
-
   const userBalance = currentUserId ? (balances[currentUserId] ?? 0) : 0;
   const totalOwed = userBalance < 0 ? Math.abs(userBalance) : 0;
   const totalOwedToYou = userBalance > 0 ? userBalance : 0;
@@ -19,9 +38,20 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        {/* Header */}
-        <Text style={styles.appTitle}>Split Fair</Text>
-        <Text style={styles.appSubtitle}>Group expense tracking made simple</Text>
+        {/* Header with group switcher */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.appTitle}>Split Fair</Text>
+            <Text style={styles.appSubtitle}>Group expense tracking made simple</Text>
+          </View>
+        </View>
+
+        {/* Group Selector */}
+        <TouchableOpacity style={styles.groupSelector} onPress={() => router.push('/groups')}>
+          <Ionicons name="people-circle-outline" size={20} color="#7C3AED" />
+          <Text style={styles.groupSelectorText}>{activeGroup.name}</Text>
+          <Ionicons name="chevron-down" size={16} color="#888" />
+        </TouchableOpacity>
 
         {/* Summary Cards */}
         <View style={styles.cardRow}>
@@ -42,7 +72,6 @@ export default function HomeScreen() {
         {people.length === 0 ? (
           <View style={styles.gettingStarted}>
             <Text style={styles.gettingStartedTitle}>Get Started in 3 Steps</Text>
-
             <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/people')}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>1</Text>
@@ -53,9 +82,7 @@ export default function HomeScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color="#555" />
             </TouchableOpacity>
-
             <View style={styles.stepDivider} />
-
             <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/settings')}>
               <View style={[styles.stepNumber, { backgroundColor: '#4ECDC422', borderColor: '#4ECDC4' }]}>
                 <Text style={[styles.stepNumberText, { color: '#4ECDC4' }]}>2</Text>
@@ -64,23 +91,20 @@ export default function HomeScreen() {
                 <Text style={styles.stepTitle}>Select yourself</Text>
                 <Text style={styles.stepHint}>So the app knows your balance</Text>
               </View>
-            <Ionicons name="chevron-forward" size={18} color="#555" />
-          </TouchableOpacity>
-
-          <View style={styles.stepDivider} />
-
-          <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/expense/new')}>
-            <View style={[styles.stepNumber, { backgroundColor: '#FF6B9D22', borderColor: '#FF6B9D' }]}>
-              <Text style={[styles.stepNumberText, { color: '#FF6B9D' }]}>3</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Add your first expense</Text>
-              <Text style={styles.stepHint}>Split a bill between your group</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#555" />
-          </TouchableOpacity>
-        </View>
-
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+            <View style={styles.stepDivider} />
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/expense/new')}>
+              <View style={[styles.stepNumber, { backgroundColor: '#FF6B9D22', borderColor: '#FF6B9D' }]}>
+                <Text style={[styles.stepNumberText, { color: '#FF6B9D' }]}>3</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Add your first expense</Text>
+                <Text style={styles.stepHint}>Split a bill between your group</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={styles.card}>
             {people.map(person => {
@@ -136,8 +160,15 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   scroll: { padding: 20, paddingBottom: 100 },
-  appTitle: { fontSize: 32, fontWeight: 'bold', color: 'white', marginTop: 20 },
-  appSubtitle: { fontSize: 14, color: '#888', marginBottom: 24 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 20 },
+  appTitle: { fontSize: 32, fontWeight: 'bold', color: 'white' },
+  appSubtitle: { fontSize: 14, color: '#888', marginBottom: 16 },
+  groupSelector: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#16213e', borderRadius: 12, padding: 12,
+    marginBottom: 24, borderWidth: 1, borderColor: '#7C3AED44',
+  },
+  groupSelectorText: { flex: 1, color: 'white', fontSize: 15, fontWeight: '500' },
   cardRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   summaryCard: {
     flex: 1, backgroundColor: '#16213e', borderRadius: 16,
@@ -149,10 +180,15 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#16213e', borderRadius: 16, padding: 16, marginBottom: 24 },
   emptyCard: {
     backgroundColor: '#16213e', borderRadius: 16, padding: 24,
-    alignItems: 'center', marginBottom: 24,
+    alignItems: 'center', marginBottom: 24, gap: 8,
   },
   emptyText: { color: '#888', fontSize: 14 },
   emptyHint: { color: '#555', fontSize: 12, marginTop: 4 },
+  createGroupButton: {
+    marginTop: 12, backgroundColor: '#7C3AED', borderRadius: 12,
+    paddingHorizontal: 24, paddingVertical: 12,
+  },
+  createGroupButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
   balanceRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   dot: { width: 12, height: 12, borderRadius: 6 },
   personName: { flex: 1, color: 'white', fontSize: 15 },
@@ -171,23 +207,10 @@ const styles = StyleSheet.create({
     shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
-
-  gettingStarted: {
-    backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24,
-  },
-  gettingStartedTitle: {
-    fontSize: 14, fontWeight: '600', color: '#888',
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
-  },
-  stepButton: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 12, padding: 16,
-  },
-  stepNumber: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#7C3AED22', borderWidth: 1, borderColor: '#7C3AED',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  gettingStarted: { backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24 },
+  gettingStartedTitle: { fontSize: 14, fontWeight: '600', color: '#888', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  stepButton: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#7C3AED22', borderWidth: 1, borderColor: '#7C3AED', justifyContent: 'center', alignItems: 'center' },
   stepNumberText: { color: '#7C3AED', fontWeight: '700', fontSize: 14 },
   stepContent: { flex: 1 },
   stepTitle: { color: 'white', fontSize: 15, fontWeight: '500' },

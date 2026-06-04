@@ -1,32 +1,67 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp, CURRENCY_SYMBOLS, Expense, ExpenseItem } from '../../context/AppContext';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { CURRENCY_SYMBOLS, Expense, ExpenseItem, useApp } from '../../context/AppContext';
 
 export default function NewExpenseScreen() {
-  const { people, addExpense, currency } = useApp();
+  const { activeGroup, addExpense } = useApp();
   const router = useRouter();
+
+  if (!activeGroup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centered}>
+          <Ionicons name="people-outline" size={48} color="#444" />
+          <Text style={styles.emptyText}>No group selected</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const { people, currency } = activeGroup;
   const sym = CURRENCY_SYMBOLS[currency];
 
+  if (people.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centered}>
+          <Ionicons name="people-outline" size={48} color="#444" />
+          <Text style={styles.emptyText}>No people added yet</Text>
+          <Text style={styles.emptyHint}>Go to the People tab first and add your group.</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return <NewExpenseForm people={people} sym={sym} addExpense={addExpense} router={router} />;
+}
+
+function newItem(splitBetween: string[]): ExpenseItem {
+  return {
+    id: Date.now().toString() + Math.random(),
+    name: '',
+    amount: 0,
+    splitBetween,
+  };
+}
+
+function NewExpenseForm({ people, sym, addExpense, router }: any) {
   const [title, setTitle] = useState('');
   const [tipPercent, setTipPercent] = useState(0);
   const [customTip, setCustomTip] = useState('');
   const [showCustomTip, setShowCustomTip] = useState(false);
   const [paidById, setPaidById] = useState(people[0]?.id ?? '');
-  const [items, setItems] = useState<ExpenseItem[]>([newItem(people.map(p => p.id))]);
-
-  function newItem(splitBetween: string[]): ExpenseItem {
-    return {
-      id: Date.now().toString() + Math.random(),
-      name: '',
-      amount: 0,
-      splitBetween,
-    };
-  }
+  const [items, setItems] = useState<ExpenseItem[]>([newItem(people.map((p: any) => p.id))]);
 
   const addItem = () => {
-    setItems(prev => [...prev, newItem(people.map(p => p.id))]);
+    setItems(prev => [...prev, newItem(people.map((p: any) => p.id))]);
   };
 
   const removeItem = (id: string) => {
@@ -37,9 +72,7 @@ export default function NewExpenseScreen() {
   const updateItem = (id: string, field: 'name' | 'amount', value: string) => {
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      if (field === 'amount') {
-        return { ...item, amount: parseFloat(value) || 0 };
-      }
+      if (field === 'amount') return { ...item, amount: parseFloat(value) || 0 };
       return { ...item, name: value };
     }));
   };
@@ -48,7 +81,7 @@ export default function NewExpenseScreen() {
     setItems(prev => prev.map(item => {
       if (item.id !== itemId) return item;
       const already = item.splitBetween.includes(personId);
-      if (already && item.splitBetween.length === 1) return item; // keep at least one
+      if (already && item.splitBetween.length === 1) return item;
       return {
         ...item,
         splitBetween: already
@@ -89,26 +122,9 @@ export default function NewExpenseScreen() {
     router.back();
   };
 
-  if (people.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.centered}>
-          <Ionicons name="people-outline" size={48} color="#444" />
-          <Text style={styles.emptyText}>No people added yet</Text>
-          <Text style={styles.emptyHint}>Go to the People tab first and add your group.</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="white" />
@@ -117,7 +133,6 @@ export default function NewExpenseScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Expense Title */}
         <Text style={styles.label}>Expense Name</Text>
         <TextInput
           style={styles.input}
@@ -127,7 +142,6 @@ export default function NewExpenseScreen() {
           onChangeText={setTitle}
         />
 
-        {/* Items */}
         <Text style={styles.label}>Items</Text>
         {items.map((item, index) => (
           <View key={item.id} style={styles.itemCard}>
@@ -156,11 +170,9 @@ export default function NewExpenseScreen() {
                 </TouchableOpacity>
               )}
             </View>
-
-            {/* Split Between */}
             <Text style={styles.splitLabel}>Split between:</Text>
             <View style={styles.peopleRow}>
-              {people.map(person => {
+              {people.map((person: any) => {
                 const selected = item.splitBetween.includes(person.id);
                 return (
                   <TouchableOpacity
@@ -182,13 +194,11 @@ export default function NewExpenseScreen() {
           <Text style={styles.addItemText}>Add another item</Text>
         </TouchableOpacity>
 
-        {/* Subtotal */}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal</Text>
           <Text style={styles.totalValue}>{sym}{subtotal.toFixed(2)}</Text>
         </View>
 
-        {/* Tip */}
         <Text style={styles.label}>Tip</Text>
         <View style={styles.tipRow}>
           {[10, 15, 20].map(pct => (
@@ -221,16 +231,14 @@ export default function NewExpenseScreen() {
           />
         )}
 
-        {/* Total */}
         <View style={[styles.totalRow, { marginTop: 8 }]}>
           <Text style={[styles.totalLabel, { fontSize: 18 }]}>Total</Text>
           <Text style={[styles.totalValue, { fontSize: 20, color: '#4ECDC4' }]}>{sym}{total.toFixed(2)}</Text>
         </View>
 
-        {/* Paid By */}
         <Text style={styles.label}>Paid by</Text>
         <View style={styles.card}>
-          {people.map(person => (
+          {people.map((person: any) => (
             <TouchableOpacity
               key={person.id}
               style={[styles.paidByRow, paidById === person.id && styles.paidByRowActive]}
@@ -247,7 +255,6 @@ export default function NewExpenseScreen() {
 
       </ScrollView>
 
-      {/* Save Button */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Expense</Text>

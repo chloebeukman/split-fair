@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // --- TYPES ---
 export type Currency = 'ZAR' | 'USD' | 'EUR' | 'GBP';
-
+ 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   ZAR: 'R',
   USD: '$',
@@ -33,6 +33,15 @@ export type Expense = {
   date: string;
 };
 
+export type Group = {
+  id: string;
+  name: string;
+  people: Person[];
+  expenses: Expense[];
+  currency: Currency;
+  currentUserId: string | null;
+};
+
 export type Settlement = {
   fromId: string;
   toId: string;
@@ -49,8 +58,8 @@ export function calculateBalances(
 
   expenses.forEach(expense => {
     const subtotal = expense.items.reduce((sum, item) => sum + item.amount, 0);
-    const total = subtotal * (1 + expense.tipPercent / 100);
     const tipMultiplier = 1 + expense.tipPercent / 100;
+    const total = subtotal * tipMultiplier;
 
     balances[expense.paidById] += total;
 
@@ -104,63 +113,91 @@ export function calculateSettlements(
 
 // --- STORAGE KEYS ---
 const KEYS = {
-  people: 'splitfair_people',
-  expenses: 'splitfair_expenses',
-  currency: 'splitfair_currency',
-  currentUserId: 'splitfair_current_user',
+  groups: 'splitfair_groups',
+  activeGroupId: 'splitfair_active_group',
   hasOnboarded: 'splitfair_has_onboarded',
 };
 
-// --- CONTEXT ---
-type AppContextType = {
-  people: Person[];
-  expenses: Expense[];
-  currency: Currency;
-  isLoading: boolean;
-  currentUserId: string | null;
-  setCurrentUserId: (id: string | null) => void;
-  setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
-  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
-  setCurrency: (currency: Currency) => void;
-  addPerson: (name: string) => void;
-  removePerson: (id: string) => void;
-  addExpense: (expense: Expense) => void;
-  removeExpense: (id: string) => void;
-  hasOnboarded: boolean;
-  setHasOnboarded: (value: boolean) => void;
-  updateExpense: (expense: Expense) => void;
-};
-
-const AppContext = createContext<AppContextType | null>(null);
+// --- DEFAULT GROUP ---
+function createGroup(name: string): Group {
+  return {
+    id: Date.now().toString(),
+    name,
+    people: [],
+    expenses: [],
+    currency: 'ZAR',
+    currentUserId: null,
+  };
+}
 
 const PERSON_COLORS = [
   '#FF6B9D', '#4ECDC4', '#FF6B6B', '#45B7D1',
   '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8',
 ];
 
+// --- CONTEXT TYPE ---
+type AppContextType = {
+  groups: Group[];
+  activeGroupId: string | null;
+  activeGroup: Group | null;
+  hasOnboarded: boolean;
+  isLoading: boolean;
+
+  // Group actions
+  addGroup: (name: string) => void;
+  removeGroup: (id: string) => void;
+  renameGroup: (id: string, name: string) => void;
+  setActiveGroupId: (id: string) => void;
+
+  // People actions (scoped to active group)
+  addPerson: (name: string) => void;
+  removePerson: (id: string) => void;
+
+  // Expense actions (scoped to active group)
+  addExpense: (expense: Expense) => void;
+  removeExpense: (id: string) => void;
+  updateExpense: (expense: Expense) => void;
+
+  // Settings actions (scoped to active group)
+  setCurrency: (currency: Currency) => void;
+  setCurrentUserId: (id: string | null) => void;
+
+  // App actions
+  setHasOnboarded: (value: boolean) => void;
+  resetActiveGroup: () => void;
+};
+
+const AppContext = createContext<AppContextType | null>(null);
+
+// --- PROVIDER ---
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [currency, setCurrencyState] = useState<Currency>('ZAR');
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserIdState] = useState<string | null>(null);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboardedState] = useState(false);
-  
-  // Load data on startup
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Derived active group
+  const activeGroup = groups.find(g => g.id === activeGroupId) ?? null;
+
+  // Load on startup
   useEffect(() => {
     const load = async () => {
       try {
-        const [storedPeople, storedExpenses, storedCurrency, storedCurrentUser, storedHasOnboarded] = await Promise.all([
-          AsyncStorage.getItem(KEYS.people),
-          AsyncStorage.getItem(KEYS.expenses),
-          AsyncStorage.getItem(KEYS.currency),
-          AsyncStorage.getItem(KEYS.currentUserId),
+        const [storedGroups, storedActiveGroupId, storedHasOnboarded] = await Promise.all([
+          AsyncStorage.getItem(KEYS.groups),
+          AsyncStorage.getItem(KEYS.activeGroupId),
           AsyncStorage.getItem(KEYS.hasOnboarded),
         ]);
-        if (storedPeople) setPeople(JSON.parse(storedPeople));
-        if (storedExpenses) setExpenses(JSON.parse(storedExpenses));
-        if (storedCurrency) setCurrencyState(storedCurrency as Currency);
-        if (storedCurrentUser) setCurrentUserIdState(storedCurrentUser);
+
+        if (storedGroups) {
+          const parsed = JSON.parse(storedGroups);
+          setGroups(parsed);
+          if (storedActiveGroupId) {
+            setActiveGroupIdState(storedActiveGroupId);
+          } else if (parsed.length > 0) {
+            setActiveGroupIdState(parsed[0].id);
+          }
+        }
         if (storedHasOnboarded) setHasOnboardedState(storedHasOnboarded === 'true');
       } catch (e) {
         console.error('Failed to load data:', e);
@@ -171,61 +208,117 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     load();
   }, []);
 
-  // Save people whenever they change
+  // Save groups whenever they change
   useEffect(() => {
     if (isLoading) return;
-    AsyncStorage.setItem(KEYS.people, JSON.stringify(people));
-  }, [people, isLoading]);
-  
+    AsyncStorage.setItem(KEYS.groups, JSON.stringify(groups));
+  }, [groups, isLoading]);
+
+  // Save active group id whenever it changes
   useEffect(() => {
-    if (isLoading) return;
-    AsyncStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
-  }, [expenses, isLoading]);
-  
+    if (isLoading || !activeGroupId) return;
+    AsyncStorage.setItem(KEYS.activeGroupId, activeGroupId);
+  }, [activeGroupId, isLoading]);
+
+  // Helper to update active group
+  const updateActiveGroup = (updater: (group: Group) => Group) => {
+    setGroups(prev => prev.map(g => g.id === activeGroupId ? updater(g) : g));
+  };
+
+  // --- GROUP ACTIONS ---
+  const addGroup = (name: string) => {
+    const group = createGroup(name);
+    setGroups(prev => [...prev, group]);
+    setActiveGroupIdState(group.id);
+    AsyncStorage.setItem(KEYS.activeGroupId, group.id);
+  };
+
+  const removeGroup = (id: string) => {
+    setGroups(prev => {
+      const remaining = prev.filter(g => g.id !== id);
+      if (activeGroupId === id) {
+        const newActive = remaining[0]?.id ?? null;
+        setActiveGroupIdState(newActive);
+        if (newActive) AsyncStorage.setItem(KEYS.activeGroupId, newActive);
+      }
+      return remaining;
+    });
+  };
+
+  const renameGroup = (id: string, name: string) => {
+    setGroups(prev => prev.map(g => g.id === id ? { ...g, name } : g));
+  };
+
+  const setActiveGroupId = (id: string) => {
+    setActiveGroupIdState(id);
+    AsyncStorage.setItem(KEYS.activeGroupId, id);
+  };
+
+  // --- PEOPLE ACTIONS ---
+  const addPerson = (name: string) => {
+    updateActiveGroup(g => ({
+      ...g,
+      people: [...g.people, {
+        id: Date.now().toString(),
+        name,
+        color: PERSON_COLORS[g.people.length % PERSON_COLORS.length],
+      }],
+    }));
+  };
+
+  const removePerson = (id: string) => {
+    updateActiveGroup(g => ({ ...g, people: g.people.filter(p => p.id !== id) }));
+  };
+
+  // --- EXPENSE ACTIONS ---
+  const addExpense = (expense: Expense) => {
+    updateActiveGroup(g => ({ ...g, expenses: [...g.expenses, expense] }));
+  };
+
+  const removeExpense = (id: string) => {
+    updateActiveGroup(g => ({ ...g, expenses: g.expenses.filter(e => e.id !== id) }));
+  };
+
+  const updateExpense = (expense: Expense) => {
+    updateActiveGroup(g => ({
+      ...g,
+      expenses: g.expenses.map(e => e.id === expense.id ? expense : e),
+    }));
+  };
+
+  // --- SETTINGS ACTIONS ---
+  const setCurrency = (currency: Currency) => {
+    updateActiveGroup(g => ({ ...g, currency }));
+  };
+
+  const setCurrentUserId = (id: string | null) => {
+    updateActiveGroup(g => ({ ...g, currentUserId: id }));
+  };
+
+  const resetActiveGroup = () => {
+    updateActiveGroup(g => ({
+      ...g,
+      people: [],
+      expenses: [],
+      currency: 'ZAR',
+      currentUserId: null,
+    }));
+  };
+
+  // --- APP ACTIONS ---
   const setHasOnboarded = async (value: boolean) => {
     setHasOnboardedState(value);
     await AsyncStorage.setItem(KEYS.hasOnboarded, value.toString());
   };
 
-  const addPerson = (name: string) => {
-    const id = Date.now().toString();
-    const color = PERSON_COLORS[people.length % PERSON_COLORS.length];
-    setPeople(prev => [...prev, { id, name, color }]);
-  };
-
-  const removePerson = (id: string) => {
-    setPeople(prev => prev.filter(p => p.id !== id));
-  };
-
-  const addExpense = (expense: Expense) => {
-    setExpenses(prev => [...prev, expense]);
-  };
-
-  const removeExpense = (id: string) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
-  };
-
-  const updateExpense = (expense: Expense) => {
-  setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
-};
-
-  const setCurrency = async (c: Currency) => {
-    setCurrencyState(c);
-    await AsyncStorage.setItem(KEYS.currency, c);
-  };
-
-  const setCurrentUserId = async (id: string | null) => {
-  setCurrentUserIdState(id);
-  if (id) await AsyncStorage.setItem(KEYS.currentUserId, id);
-  else await AsyncStorage.removeItem(KEYS.currentUserId);
-  };
-
   return (
     <AppContext.Provider value={{
-      people, expenses, currency, isLoading,
-      setPeople, setExpenses, setCurrency,
-      addPerson, removePerson, addExpense, removeExpense, updateExpense,
-      currentUserId, setCurrentUserId, hasOnboarded, setHasOnboarded,
+      groups, activeGroupId, activeGroup, hasOnboarded, isLoading,
+      addGroup, removeGroup, renameGroup, setActiveGroupId,
+      addPerson, removePerson,
+      addExpense, removeExpense, updateExpense,
+      setCurrency, setCurrentUserId,
+      setHasOnboarded, resetActiveGroup,
     }}>
       {children}
     </AppContext.Provider>

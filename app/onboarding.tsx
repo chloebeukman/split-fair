@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useApp } from '../context/AppContext';
-
-const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { setHasOnboarded } = useApp();
+  const { setHasOnboarded, addGroup } = useApp();
+  const [groupName, setGroupName] = useState('');
 
   const steps = [
     {
@@ -29,14 +29,16 @@ export default function OnboardingScreen() {
       description: 'Split Fair calculates the minimum number of payments needed to clear all debts. No mental math, no arguments.',
     },
     {
-      icon: 'settings-outline',
+      icon: 'albums-outline',
       color: '#45B7D1',
-      title: 'Set Yourself Up',
-      description: 'Go to Settings to select which person is you, and choose your preferred currency.',
+      title: 'Multiple Groups',
+      description: 'Create separate groups for different trips or friend circles. Each group has its own people, expenses and currency.',
     },
   ];
 
   const handleGetStarted = async () => {
+    const name = groupName.trim() || 'My Group';
+    addGroup(name);
     await setHasOnboarded(true);
     router.replace('/home');
   };
@@ -45,14 +47,12 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.emoji}>🤝💸</Text>
           <Text style={styles.title}>Welcome to Split Fair</Text>
           <Text style={styles.subtitle}>Fair splits, every time.</Text>
         </View>
 
-        {/* Steps */}
         {steps.map((step, index) => (
           <View key={index} style={styles.stepCard}>
             <View style={[styles.iconCircle, { backgroundColor: step.color + '22', borderColor: step.color }]}>
@@ -65,9 +65,21 @@ export default function OnboardingScreen() {
           </View>
         ))}
 
+        {/* First Group Name */}
+        <View style={styles.groupNameSection}>
+          <Text style={styles.groupNameLabel}>Name your first group</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Cape Town Trip, Regular Friends..."
+            placeholderTextColor="#555"
+            value={groupName}
+            onChangeText={setGroupName}
+            returnKeyType="done"
+          />
+        </View>
+
       </ScrollView>
 
-      {/* Get Started Button */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.button} onPress={handleGetStarted}>
           <Text style={styles.buttonText}>Get Started</Text>
@@ -96,6 +108,13 @@ const styles = StyleSheet.create({
   stepText: { flex: 1 },
   stepTitle: { fontSize: 17, fontWeight: '600', color: 'white', marginBottom: 6 },
   stepDescription: { fontSize: 14, color: '#888', lineHeight: 20 },
+  groupNameSection: { marginTop: 8 },
+  groupNameLabel: { fontSize: 16, fontWeight: '600', color: 'white', marginBottom: 12 },
+  input: {
+    backgroundColor: '#16213e', borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+    color: 'white', fontSize: 16,
+  },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     padding: 24, backgroundColor: '#1a1a2e',
