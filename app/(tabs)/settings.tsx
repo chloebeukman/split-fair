@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CURRENCY_SYMBOLS, Currency, useApp } from '../../context/AppContext';
+import { supabase } from '../../lib/supabase';
 
 export default function SettingsScreen() {
   const {
@@ -116,8 +117,30 @@ export default function SettingsScreen() {
             <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
             <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Reset this group</Text>
           </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => {
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await supabase.auth.signOut();
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
+            <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
-
       </ScrollView>
     </View>
   );
