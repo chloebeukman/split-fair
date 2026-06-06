@@ -9,6 +9,7 @@ export default function SettingsScreen() {
     setCurrency,
     setCurrentUserId,
     resetActiveGroup,
+    setIsGuest
   } = useApp();
 
   const currencies: Currency[] = ['ZAR', 'USD', 'EUR', 'GBP'];
@@ -26,6 +27,24 @@ export default function SettingsScreen() {
   }
 
   const { people, currentUserId, currency } = activeGroup;
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await setIsGuest(false);
+            await supabase.auth.signOut();
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -105,11 +124,7 @@ export default function SettingsScreen() {
                 `This will delete all people and expenses in "${activeGroup.name}". This cannot be undone.`,
                 [
                   { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Reset',
-                    style: 'destructive',
-                    onPress: resetActiveGroup,
-                  },
+                  { text: 'Reset', style: 'destructive', onPress: resetActiveGroup },
                 ]
               );
             }}
@@ -118,29 +133,12 @@ export default function SettingsScreen() {
             <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Reset this group</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => {
-              Alert.alert(
-                'Sign Out',
-                'Are you sure you want to sign out?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Sign Out',
-                    style: 'destructive',
-                    onPress: async () => {
-                      await supabase.auth.signOut();
-                    },
-                  },
-                ]
-              );
-            }}
-          >
+          <TouchableOpacity style={styles.row} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
             <Text style={[styles.rowText, { color: '#FF6B6B' }]}>Sign Out</Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </View>
   );

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
@@ -27,6 +29,13 @@ export default function LoginScreen() {
     } else {
       router.replace('/home');
     }
+  };
+
+ const { setIsGuest } = useApp();
+
+  const handleGuest = async () => {
+    await setIsGuest(true);
+    router.replace('/onboarding');
   };
 
   return (
@@ -82,10 +91,7 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={() => router.replace('/home')}
-          >
+          <TouchableOpacity style={styles.skipButton} onPress={handleGuest}>
             <Text style={styles.skipText}>Continue without account</Text>
           </TouchableOpacity>
 

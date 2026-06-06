@@ -1,21 +1,23 @@
-import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AppProvider } from '../context/AppContext';
-import { supabase } from '../lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { AppProvider, useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isGuest, isLoading } = useApp();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setLoading(false);
-    });
+    };
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -25,19 +27,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-
+    if (loading || isLoading) return;
     const inAuthGroup = segments[0] === 'auth';
-    const inOnboarding = segments[0] === 'onboarding';
+    const isAuthenticated = !!session || isGuest;
 
-    if (!session && !inAuthGroup) {
+    if (!isAuthenticated && !inAuthGroup) {
       router.replace('/auth/login');
-    } else if (session && inAuthGroup) {
+    } else if (isAuthenticated && inAuthGroup) {
       router.replace('/home');
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, isGuest, isLoading]);
 
-  if (loading) return null;
+  if (loading || isLoading) return null;
 
   return <>{children}</>;
 }

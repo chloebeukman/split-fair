@@ -142,12 +142,15 @@ type AppContextType = {
   activeGroup: Group | null;
   hasOnboarded: boolean;
   isLoading: boolean;
+  isGuest: boolean;
 
   // Group actions
   addGroup: (name: string) => void;
   removeGroup: (id: string) => void;
   renameGroup: (id: string, name: string) => void;
   setActiveGroupId: (id: string) => void;
+  setIsGuest: (value: boolean) => void;
+
 
   // People actions (scoped to active group)
   addPerson: (name: string) => void;
@@ -175,6 +178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
   const [hasOnboarded, setHasOnboardedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuest, setIsGuestState] = useState(false);
 
   // Derived active group
   const activeGroup = groups.find(g => g.id === activeGroupId) ?? null;
@@ -183,10 +187,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [storedGroups, storedActiveGroupId, storedHasOnboarded] = await Promise.all([
+        const [storedGroups, storedActiveGroupId, storedHasOnboarded, storedGuestMode] = await Promise.all([
           AsyncStorage.getItem(KEYS.groups),
           AsyncStorage.getItem(KEYS.activeGroupId),
           AsyncStorage.getItem(KEYS.hasOnboarded),
+          AsyncStorage.getItem('splitfair_guest_mode'),
         ]);
 
         if (storedGroups) {
@@ -199,6 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
         if (storedHasOnboarded) setHasOnboardedState(storedHasOnboarded === 'true');
+        if (storedGuestMode) setIsGuestState(storedGuestMode === 'true');
       } catch (e) {
         console.error('Failed to load data:', e);
       } finally {
@@ -311,6 +317,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(KEYS.hasOnboarded, value.toString());
   };
 
+  const setIsGuest = async (value: boolean) => {
+    setIsGuestState(value);
+    if (value) {
+      await AsyncStorage.setItem('splitfair_guest_mode', 'true');
+    } else {
+      await AsyncStorage.removeItem('splitfair_guest_mode');
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       groups, activeGroupId, activeGroup, hasOnboarded, isLoading,
@@ -319,6 +334,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addExpense, removeExpense, updateExpense,
       setCurrency, setCurrentUserId,
       setHasOnboarded, resetActiveGroup,
+      isGuest, setIsGuest,
     }}>
       {children}
     </AppContext.Provider>
