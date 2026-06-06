@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function SignupScreen() {
@@ -36,84 +36,86 @@ export default function SignupScreen() {
     } else {
       Alert.alert(
         'Account created!',
-        'Please check your email to verify your account, then sign in.',
+        'Your account is ready. You can now sign in.',
         [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
       );
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.inner}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#1a1a2e' }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.inner}>
 
-        <View style={styles.header}>
-          <Text style={styles.emoji}>🤝💸</Text>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join Split Fair today</Text>
-        </View>
+          <View style={styles.header}>
+            <Text style={styles.emoji}>🤝💸</Text>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join Split Fair today</Text>
+          </View>
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="your@email.com"
-          placeholderTextColor="#555"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-        />
-
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordRow}>
+          <Text style={styles.label}>Email</Text>
           <TextInput
-            style={[styles.input, { flex: 1, marginBottom: 0 }]}
-            placeholder="At least 6 characters"
+            style={styles.input}
+            placeholder="your@email.com"
             placeholderTextColor="#555"
-            value={password}
-            onChangeText={setPassword}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              placeholder="At least 6 characters"
+              placeholderTextColor="#555"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(prev => !prev)}
+            >
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Confirm Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Repeat your password"
+            placeholderTextColor="#555"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
+
           <TouchableOpacity
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(prev => !prev)}
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSignup}
+            disabled={loading}
           >
-            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+            <Text style={styles.buttonText}>{loading ? 'Creating account...' : 'Create Account'}</Text>
           </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.replace('/auth/login')}>
+              <Text style={styles.footerLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
-
-        <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Repeat your password"
-          placeholderTextColor="#555"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSignup}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Creating account...' : 'Create Account'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.replace('/auth/login')}>
-            <Text style={styles.footerLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -131,10 +133,7 @@ const styles = StyleSheet.create({
     color: 'white', fontSize: 16, marginBottom: 8,
   },
   passwordRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  eyeButton: {
-    backgroundColor: '#16213e', borderRadius: 12,
-    padding: 14,
-  },
+  eyeButton: { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
   button: {
     backgroundColor: '#7C3AED', borderRadius: 16,
     padding: 18, alignItems: 'center', marginTop: 24,
