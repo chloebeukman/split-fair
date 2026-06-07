@@ -1,9 +1,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createExpense,
+  createPerson,
+  createGroup as dbCreateGroup,
+  deleteExpense,
+  deleteGroup,
+  deletePerson,
+  fetchGroups,
+  updateCurrentPerson,
+  updateExpenseInDb,
+  updateGroupCurrency,
+  updateGroupName,
+} from '../lib/database';
+import { supabase } from '../lib/supabase';
 
 // --- TYPES ---
 export type Currency = 'ZAR' | 'USD' | 'EUR' | 'GBP';
- 
+
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   ZAR: 'R',
   USD: '$',
@@ -113,22 +127,9 @@ export function calculateSettlements(
 
 // --- STORAGE KEYS ---
 const KEYS = {
-  groups: 'splitfair_groups',
   activeGroupId: 'splitfair_active_group',
   hasOnboarded: 'splitfair_has_onboarded',
 };
-
-// --- DEFAULT GROUP ---
-function createGroup(name: string): Group {
-  return {
-    id: Date.now().toString(),
-    name,
-    people: [],
-    expenses: [],
-    currency: 'ZAR',
-    currentUserId: null,
-  };
-}
 
 const PERSON_COLORS = [
   '#FF6B9D', '#4ECDC4', '#FF6B6B', '#45B7D1',
@@ -145,29 +146,28 @@ type AppContextType = {
   isGuest: boolean;
 
   // Group actions
-  addGroup: (name: string) => void;
-  removeGroup: (id: string) => void;
-  renameGroup: (id: string, name: string) => void;
+  addGroup: (name: string) => Promise<void>;
+  removeGroup: (id: string) => Promise<void>;
+  renameGroup: (id: string, name: string) => Promise<void>;
   setActiveGroupId: (id: string) => void;
-  setIsGuest: (value: boolean) => void;
+  setIsGuest: (value: boolean) => Promise<void>;
 
+  // People actions
+  addPerson: (name: string) => Promise<void>;
+  removePerson: (id: string) => Promise<void>;
 
-  // People actions (scoped to active group)
-  addPerson: (name: string) => void;
-  removePerson: (id: string) => void;
+  // Expense actions
+  addExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
+  removeExpense: (id: string) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
 
-  // Expense actions (scoped to active group)
-  addExpense: (expense: Expense) => void;
-  removeExpense: (id: string) => void;
-  updateExpense: (expense: Expense) => void;
-
-  // Settings actions (scoped to active group)
-  setCurrency: (currency: Currency) => void;
-  setCurrentUserId: (id: string | null) => void;
+  // Settings actions
+  setCurrency: (currency: Currency) => Promise<void>;
+  setCurrentUserId: (id: string | null) => Promise<void>;
 
   // App actions
-  setHasOnboarded: (value: boolean) => void;
-  resetActiveGroup: () => void;
+  setHasOnboarded: (value: boolean) => Promise<void>;
+  resetActiveGroup: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -179,32 +179,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hasOnboarded, setHasOnboardedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuestState] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Derived active group
   const activeGroup = groups.find(g => g.id === activeGroupId) ?? null;
 
   // Load on startup
   useEffect(() => {
     const load = async () => {
       try {
-        const [storedGroups, storedActiveGroupId, storedHasOnboarded, storedGuestMode] = await Promise.all([
-          AsyncStorage.getItem(KEYS.groups),
+        const [{ data: { session } }, storedActiveGroupId, storedHasOnboarded, storedGuestMode] = await Promise.all([
+          supabase.auth.getSession(),
           AsyncStorage.getItem(KEYS.activeGroupId),
           AsyncStorage.getItem(KEYS.hasOnboarded),
           AsyncStorage.getItem('splitfair_guest_mode'),
         ]);
 
-        if (storedGroups) {
-          const parsed = JSON.parse(storedGroups);
-          setGroups(parsed);
-          if (storedActiveGroupId) {
-            setActiveGroupIdState(storedActiveGroupId);
-          } else if (parsed.length > 0) {
-            setActiveGroupIdState(parsed[0].id);
-          }
-        }
         if (storedHasOnboarded) setHasOnboardedState(storedHasOnboarded === 'true');
         if (storedGuestMode) setIsGuestState(storedGuestMode === 'true');
+
+        if (session?.user) {
+          setUserId(session.user.id);
+          const fetchedGroups = await fetchGroups(session.user.id);
+          setGroups(fetchedGroups);
+
+          if (storedActiveGroupId && fetchedGroups.find(g => g.id === storedActiveGroupId)) {
+            setActiveGroupIdState(storedActiveGroupId);
+          } else if (fetchedGroups.length > 0) {
+            setActiveGroupIdState(fetchedGroups[0].id);
+          }
+        } else if (storedGuestMode === 'true') {
+          // Guest mode — load from AsyncStorage
+          const storedGroups = await AsyncStorage.getItem('splitfair_groups');
+          if (storedGroups) {
+            const parsed = JSON.parse(storedGroups);
+            setGroups(parsed);
+            if (storedActiveGroupId && parsed.find((g: Group) => g.id === storedActiveGroupId)) {
+              setActiveGroupIdState(storedActiveGroupId);
+            } else if (parsed.length > 0) {
+              setActiveGroupIdState(parsed[0].id);
+            }
+          }
+        }
       } catch (e) {
         console.error('Failed to load data:', e);
       } finally {
@@ -212,34 +227,66 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     };
     load();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        const fetchedGroups = await fetchGroups(session.user.id);
+        setGroups(fetchedGroups);
+        if (fetchedGroups.length > 0) {
+          setActiveGroupIdState(fetchedGroups[0].id);
+        }
+      } else {
+        setUserId(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Save groups whenever they change
+  // Save guest groups to AsyncStorage
   useEffect(() => {
-    if (isLoading) return;
-    AsyncStorage.setItem(KEYS.groups, JSON.stringify(groups));
-  }, [groups, isLoading]);
+    if (isLoading || !isGuest) return;
+    AsyncStorage.setItem('splitfair_groups', JSON.stringify(groups));
+  }, [groups, isLoading, isGuest]);
 
-  // Save active group id whenever it changes
+  // Save active group id
   useEffect(() => {
     if (isLoading || !activeGroupId) return;
     AsyncStorage.setItem(KEYS.activeGroupId, activeGroupId);
   }, [activeGroupId, isLoading]);
 
-  // Helper to update active group
-  const updateActiveGroup = (updater: (group: Group) => Group) => {
-    setGroups(prev => prev.map(g => g.id === activeGroupId ? updater(g) : g));
+  const updateLocalGroup = (id: string, updater: (group: Group) => Group) => {
+    setGroups(prev => prev.map(g => g.id === id ? updater(g) : g));
   };
 
   // --- GROUP ACTIONS ---
-  const addGroup = (name: string) => {
-    const group = createGroup(name);
-    setGroups(prev => [...prev, group]);
-    setActiveGroupIdState(group.id);
-    AsyncStorage.setItem(KEYS.activeGroupId, group.id);
+  const addGroup = async (name: string) => {
+    if (userId) {
+      const group = await dbCreateGroup(name, userId);
+      if (group) {
+        setGroups(prev => [...prev, group]);
+        setActiveGroupIdState(group.id);
+        AsyncStorage.setItem(KEYS.activeGroupId, group.id);
+      }
+    } else {
+      // Guest mode
+      const group: Group = {
+        id: Date.now().toString(),
+        name,
+        people: [],
+        expenses: [],
+        currency: 'ZAR',
+        currentUserId: null,
+      };
+      setGroups(prev => [...prev, group]);
+      setActiveGroupIdState(group.id);
+      AsyncStorage.setItem(KEYS.activeGroupId, group.id);
+    }
   };
 
-  const removeGroup = (id: string) => {
+  const removeGroup = async (id: string) => {
+    if (userId) await deleteGroup(id);
     setGroups(prev => {
       const remaining = prev.filter(g => g.id !== id);
       if (activeGroupId === id) {
@@ -251,8 +298,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const renameGroup = (id: string, name: string) => {
-    setGroups(prev => prev.map(g => g.id === id ? { ...g, name } : g));
+  const renameGroup = async (id: string, name: string) => {
+    if (userId) await updateGroupName(id, name);
+    updateLocalGroup(id, g => ({ ...g, name }));
   };
 
   const setActiveGroupId = (id: string) => {
@@ -261,48 +309,81 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // --- PEOPLE ACTIONS ---
-  const addPerson = (name: string) => {
-    updateActiveGroup(g => ({
-      ...g,
-      people: [...g.people, {
-        id: Date.now().toString(),
-        name,
-        color: PERSON_COLORS[g.people.length % PERSON_COLORS.length],
-      }],
-    }));
+  const addPerson = async (name: string) => {
+    if (!activeGroupId) return;
+    const color = PERSON_COLORS[(activeGroup?.people.length ?? 0) % PERSON_COLORS.length];
+
+    if (userId) {
+      const person = await createPerson(activeGroupId, name, color);
+      if (person) {
+        updateLocalGroup(activeGroupId, g => ({ ...g, people: [...g.people, person] }));
+      }
+    } else {
+      const person: Person = { id: Date.now().toString(), name, color };
+      updateLocalGroup(activeGroupId, g => ({ ...g, people: [...g.people, person] }));
+    }
   };
 
-  const removePerson = (id: string) => {
-    updateActiveGroup(g => ({ ...g, people: g.people.filter(p => p.id !== id) }));
+  const removePerson = async (id: string) => {
+    if (!activeGroupId) return;
+    if (userId) await deletePerson(id);
+    updateLocalGroup(activeGroupId, g => ({ ...g, people: g.people.filter(p => p.id !== id) }));
   };
 
   // --- EXPENSE ACTIONS ---
-  const addExpense = (expense: Expense) => {
-    updateActiveGroup(g => ({ ...g, expenses: [...g.expenses, expense] }));
+  const addExpense = async (expense: Omit<Expense, 'id'>) => {
+    if (!activeGroupId) return;
+
+    if (userId) {
+      const created = await createExpense(activeGroupId, expense);
+      if (created) {
+        updateLocalGroup(activeGroupId, g => ({ ...g, expenses: [...g.expenses, created] }));
+      }
+    } else {
+      const newExpense: Expense = { ...expense, id: Date.now().toString() };
+      updateLocalGroup(activeGroupId, g => ({ ...g, expenses: [...g.expenses, newExpense] }));
+    }
   };
 
-  const removeExpense = (id: string) => {
-    updateActiveGroup(g => ({ ...g, expenses: g.expenses.filter(e => e.id !== id) }));
+  const removeExpense = async (id: string) => {
+    if (!activeGroupId) return;
+    if (userId) await deleteExpense(id);
+    updateLocalGroup(activeGroupId, g => ({ ...g, expenses: g.expenses.filter(e => e.id !== id) }));
   };
 
-  const updateExpense = (expense: Expense) => {
-    updateActiveGroup(g => ({
+  const updateExpense = async (expense: Expense) => {
+    if (!activeGroupId) return;
+    if (userId) await updateExpenseInDb(activeGroupId, expense);
+    updateLocalGroup(activeGroupId, g => ({
       ...g,
       expenses: g.expenses.map(e => e.id === expense.id ? expense : e),
     }));
   };
 
   // --- SETTINGS ACTIONS ---
-  const setCurrency = (currency: Currency) => {
-    updateActiveGroup(g => ({ ...g, currency }));
+  const setCurrency = async (currency: Currency) => {
+    if (!activeGroupId) return;
+    if (userId) await updateGroupCurrency(activeGroupId, currency);
+    updateLocalGroup(activeGroupId, g => ({ ...g, currency }));
   };
 
-  const setCurrentUserId = (id: string | null) => {
-    updateActiveGroup(g => ({ ...g, currentUserId: id }));
+  const setCurrentUserId = async (id: string | null) => {
+    if (!activeGroupId) return;
+    if (userId) await updateCurrentPerson(activeGroupId, userId, id);
+    updateLocalGroup(activeGroupId, g => ({ ...g, currentUserId: id }));
   };
 
-  const resetActiveGroup = () => {
-    updateActiveGroup(g => ({
+  const resetActiveGroup = async () => {
+    if (!activeGroupId) return;
+    const group = activeGroup;
+    if (!group) return;
+
+    if (userId) {
+      await Promise.all(group.expenses.map(e => deleteExpense(e.id)));
+      await Promise.all(group.people.map(p => deletePerson(p.id)));
+    }
+
+    updateLocalGroup(activeGroupId, g => ({
       ...g,
       people: [],
       expenses: [],
@@ -328,13 +409,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      groups, activeGroupId, activeGroup, hasOnboarded, isLoading,
-      addGroup, removeGroup, renameGroup, setActiveGroupId,
+      groups, activeGroupId, activeGroup, hasOnboarded, isLoading, isGuest,
+      addGroup, removeGroup, renameGroup, setActiveGroupId, setIsGuest,
       addPerson, removePerson,
       addExpense, removeExpense, updateExpense,
       setCurrency, setCurrentUserId,
       setHasOnboarded, resetActiveGroup,
-      isGuest, setIsGuest,
     }}>
       {children}
     </AppContext.Provider>

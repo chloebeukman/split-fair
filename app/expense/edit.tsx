@@ -100,7 +100,7 @@ function EditExpenseForm({ existing, people, sym, updateExpense, router }: any) 
   const activeTip = showCustomTip ? (parseFloat(customTip) || tipPercent) : tipPercent;
   const total = subtotal * (1 + activeTip / 100);
 
-  const handleSave = () => {
+const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Missing title', 'Please enter a name for this expense.');
       return;
@@ -118,7 +118,7 @@ function EditExpenseForm({ existing, people, sym, updateExpense, router }: any) 
       paidById,
     };
 
-    updateExpense(updated);
+    await updateExpense(updated);
     router.back();
   };
 

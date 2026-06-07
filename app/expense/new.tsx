@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { CURRENCY_SYMBOLS, Expense, ExpenseItem, useApp } from '../../context/AppContext';
+import { CURRENCY_SYMBOLS, ExpenseItem, useApp } from '../../context/AppContext';
 
 export default function NewExpenseScreen() {
   const { activeGroup, addExpense } = useApp();
@@ -109,16 +109,13 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
       return;
     }
 
-    const expense: Expense = {
-      id: Date.now().toString(),
+    addExpense({
       title: title.trim(),
       items,
       tipPercent: activeTip,
       paidById,
       date: new Date().toISOString(),
-    };
-
-    addExpense(expense);
+    });
     router.back();
   };
 
