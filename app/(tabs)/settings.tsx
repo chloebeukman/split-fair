@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CURRENCY_SYMBOLS, Currency, useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
@@ -11,16 +12,25 @@ export default function SettingsScreen() {
     resetActiveGroup,
     setIsGuest
   } = useApp();
+  const router = useRouter();
 
   const currencies: Currency[] = ['ZAR', 'USD', 'EUR', 'GBP'];
 
-  if (!activeGroup) {
+if (!activeGroup) {
     return (
       <View style={styles.container}>
-        <View style={styles.emptyCard}>
-          <Ionicons name="settings-outline" size={48} color="#444" />
-          <Text style={styles.emptyText}>No group selected</Text>
-          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        <View style={styles.scroll}>
+          <Text style={styles.title}>Settings</Text>
+        </View>
+        <View style={styles.centeredEmpty}>
+          <View style={styles.emptyCard}>
+            <Ionicons name="settings-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No group selected</Text>
+            <Text style={styles.emptyHint}>Go to Home to create a group</Text>
+            <TouchableOpacity style={styles.createButton} onPress={() => router.push('/home')}>
+              <Text style={styles.createButtonText}>Go to Home</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -162,6 +172,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#16213e', borderRadius: 16, padding: 24,
     alignItems: 'center', gap: 6, marginBottom: 24,
   },
+  createButton: {
+    marginTop: 12, backgroundColor: '#7C3AED',
+    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
+  },
+  createButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
   emptyText: { color: '#888', fontSize: 15 },
   emptyHint: { color: '#555', fontSize: 13 },
+  centeredEmpty: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
 });

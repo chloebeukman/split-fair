@@ -1,17 +1,27 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp, calculateBalances, calculateSettlements, CURRENCY_SYMBOLS } from '../../context/AppContext';
+import { useRouter } from 'expo-router';
+import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { calculateBalances, calculateSettlements, CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
 
 export default function SettleScreen() {
   const { activeGroup } = useApp();
+  const router = useRouter();
 
-  if (!activeGroup) {
+if (!activeGroup) {
     return (
       <View style={styles.container}>
-        <View style={styles.emptyCard}>
-          <Ionicons name="people-outline" size={48} color="#444" />
-          <Text style={styles.emptyText}>No group selected</Text>
-          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        <View style={styles.scroll}>
+          <Text style={styles.title}>Settle Up</Text>
+        </View>
+        <View style={styles.centeredEmpty}>
+          <View style={styles.emptyCard}>
+            <Ionicons name="checkmark-circle-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No group selected</Text>
+            <Text style={styles.emptyHint}>Go to Home to create a group</Text>
+            <TouchableOpacity style={styles.createButton} onPress={() => router.push('/home')}>
+              <Text style={styles.createButtonText}>Go to Home</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -161,6 +171,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#16213e', borderRadius: 16, padding: 40,
     alignItems: 'center', gap: 8,
   },
+  createButton: {
+    marginTop: 12, backgroundColor: '#7C3AED',
+    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
+  },
+  createButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
   emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
   emptyHint: { color: '#555', fontSize: 13, textAlign: 'center' },
   card: { backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24 },
@@ -179,4 +194,7 @@ const styles = StyleSheet.create({
   balanceRight: { marginLeft: 'auto', alignItems: 'flex-end' },
   balanceAmount: { fontSize: 15, fontWeight: '600' },
   balanceStatus: { fontSize: 11, color: '#555', marginTop: 2 },
+  centeredEmpty: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
 });

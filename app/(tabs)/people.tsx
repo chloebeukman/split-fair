@@ -33,13 +33,21 @@ export default function PeopleScreen() {
     );
   };
 
-  if (!activeGroup) {
+if (!activeGroup) {
     return (
       <View style={styles.container}>
-        <View style={styles.emptyCard}>
-          <Ionicons name="people-outline" size={48} color="#444" />
-          <Text style={styles.emptyText}>No group selected</Text>
-          <Text style={styles.emptyHint}>Create a group to get started</Text>
+        <View style={styles.scroll}>
+          <Text style={styles.title}>People</Text>
+        </View>
+        <View style={styles.centeredEmpty}>
+          <View style={styles.emptyCard}>
+            <Ionicons name="people-outline" size={48} color="#444" />
+            <Text style={styles.emptyText}>No group selected</Text>
+            <Text style={styles.emptyHint}>Go to Home to create a group</Text>
+            <TouchableOpacity style={styles.createButton} onPress={() => router.push('/home')}>
+              <Text style={styles.createButtonText}>Go to Home</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -164,4 +172,13 @@ const styles = StyleSheet.create({
   },
   nextStepText: { flex: 1, color: 'white', fontSize: 15 },
   nextStepDivider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 16 },
+
+  createButton: {
+    marginTop: 12, backgroundColor: '#7C3AED',
+    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
+  },
+  createButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
+  centeredEmpty: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
 });
