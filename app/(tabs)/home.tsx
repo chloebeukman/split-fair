@@ -4,23 +4,84 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { CURRENCY_SYMBOLS, calculateBalances, calculateSettlements, useApp } from '../../context/AppContext';
 
 export default function HomeScreen() {
-  const { groups, activeGroup, activeGroupId } = useApp();
+  const { groups, activeGroup, isLoading } = useApp();
   const router = useRouter();
 
-  if (!activeGroup) {
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centered}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+if (!activeGroup) {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Text style={styles.appTitle}>Split Fair</Text>
-          <Text style={styles.appSubtitle}>Group expense tracking made simple</Text>
-          <View style={styles.emptyCard}>
-            <Ionicons name="people-outline" size={48} color="#444" />
-            <Text style={styles.emptyText}>No groups yet</Text>
-            <Text style={styles.emptyHint}>Create a group to get started</Text>
-            <TouchableOpacity style={styles.createGroupButton} onPress={() => router.push('/groups')}>
-              <Text style={styles.createGroupButtonText}>Create a Group</Text>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.appTitle}>Split Fair</Text>
+              <Text style={styles.appSubtitle}>Group expense tracking made simple</Text>
+            </View>
+          </View>
+
+          <View style={styles.gettingStarted}>
+            <Text style={styles.gettingStartedTitle}>Get Started</Text>
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/groups')}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>1</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Create your first group</Text>
+                <Text style={styles.stepHint}>Name it after your trip or occasion</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+
+            <View style={styles.stepDivider} />
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/people')}>
+              <View style={[styles.stepNumber, { backgroundColor: '#4ECDC422', borderColor: '#4ECDC4' }]}>
+                <Text style={[styles.stepNumberText, { color: '#4ECDC4' }]}>2</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Add your group members</Text>
+                <Text style={styles.stepHint}>Add everyone splitting expenses</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+
+            <View style={styles.stepDivider} />
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/settings')}>
+              <View style={[styles.stepNumber, { backgroundColor: '#45B7D122', borderColor: '#45B7D1' }]}>
+                <Text style={[styles.stepNumberText, { color: '#45B7D1' }]}>3</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Select yourself</Text>
+                <Text style={styles.stepHint}>So the app knows your balance</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
+            </TouchableOpacity>
+
+            <View style={styles.stepDivider} />
+
+            <TouchableOpacity style={styles.stepButton} onPress={() => router.push('/expense/new')}>
+              <View style={[styles.stepNumber, { backgroundColor: '#FF6B9D22', borderColor: '#FF6B9D' }]}>
+                <Text style={[styles.stepNumberText, { color: '#FF6B9D' }]}>4</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Add your first expense</Text>
+                <Text style={styles.stepHint}>Split a bill between your group</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#555" />
             </TouchableOpacity>
           </View>
+
         </ScrollView>
       </View>
     );
@@ -38,7 +99,6 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        {/* Header with group switcher */}
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.appTitle}>Split Fair</Text>
@@ -160,6 +220,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
   scroll: { padding: 20, paddingBottom: 100 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: '#888', fontSize: 16 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 20 },
   appTitle: { fontSize: 32, fontWeight: 'bold', color: 'white' },
   appSubtitle: { fontSize: 14, color: '#888', marginBottom: 16 },
@@ -184,11 +246,6 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: '#888', fontSize: 14 },
   emptyHint: { color: '#555', fontSize: 12, marginTop: 4 },
-  createGroupButton: {
-    marginTop: 12, backgroundColor: '#7C3AED', borderRadius: 12,
-    paddingHorizontal: 24, paddingVertical: 12,
-  },
-  createGroupButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
   balanceRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   dot: { width: 12, height: 12, borderRadius: 6 },
   personName: { flex: 1, color: 'white', fontSize: 15 },

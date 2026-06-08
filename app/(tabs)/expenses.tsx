@@ -112,6 +112,10 @@ export default function ExpensesScreen() {
           })
         )}
       </ScrollView>
+
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/expense/new')}>
+        <Ionicons name="add" size={32} color="white" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -154,4 +158,12 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, borderTopColor: '#ffffff10', marginTop: 4 },
   totalLabel: { color: 'white', fontSize: 15, fontWeight: '600' },
   totalValue: { color: '#4ECDC4', fontSize: 15, fontWeight: '700' },
+
+  fab: {
+    position: 'absolute', bottom: 30, right: 24,
+    backgroundColor: '#7C3AED', width: 60, height: 60,
+    borderRadius: 30, justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
+  },
 });

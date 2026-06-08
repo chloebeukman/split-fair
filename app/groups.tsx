@@ -20,6 +20,17 @@ export default function GroupsScreen() {
     }
     addGroup(trimmed);
     setNewGroupName('');
+    Alert.alert(
+      'Group Created!',
+      `"${trimmed}" is ready. Add people to get started.`,
+      [
+        {
+          text: 'Add People',
+          onPress: () => router.replace('/people'),
+        },
+        { text: 'Later', style: 'cancel' },
+      ]
+    );
   };
 
   const handleRemove = (id: string, name: string) => {
