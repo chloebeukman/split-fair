@@ -95,7 +95,7 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
   const activeTip = showCustomTip ? (parseFloat(customTip) || 0) : tipPercent;
   const total = subtotal * (1 + activeTip / 100);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Missing title', 'Please enter a name for this expense.');
       return;
@@ -109,15 +109,32 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
       return;
     }
 
-    addExpense({
+    await addExpense({
       title: title.trim(),
       items,
       tipPercent: activeTip,
       paidById,
       date: new Date().toISOString(),
     });
-    router.back();
-  };
+    Alert.alert(
+        'Expense Added! ✓',
+        'What would you like to do next?',
+        [
+          {
+            text: 'Settle Up',
+            onPress: () => router.replace('/settle'),
+          },
+          {
+            text: 'Add Another',
+            onPress: () => router.replace('/expense/new'),
+          },
+          {
+            text: 'Done',
+            onPress: () => router.replace('/home'),
+          },
+        ]
+      );
+    };
 
   return (
     <View style={styles.container}>
@@ -167,7 +184,10 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.splitLabel}>Split between:</Text>
+            <View style={styles.splitLabelRow}>
+              <Text style={styles.splitLabel}>Split between:</Text>
+              <Text style={styles.splitHint}>Tap to remove</Text>
+            </View>
             <View style={styles.peopleRow}>
               {people.map((person: any) => {
                 const selected = item.splitBetween.includes(person.id);
@@ -274,7 +294,7 @@ const styles = StyleSheet.create({
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   currencyLabel: { color: '#888', fontSize: 16 },
   amountInput: { width: 90, marginBottom: 0 },
-  splitLabel: { fontSize: 12, color: '#888', marginBottom: 8 },
+  splitLabel: { fontSize: 12, color: '#888' },
   peopleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   personChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
   chipDot: { width: 8, height: 8, borderRadius: 4 },
@@ -302,4 +322,6 @@ const styles = StyleSheet.create({
   emptyHint: { color: '#555', fontSize: 13, textAlign: 'center' },
   backButton: { marginTop: 16, backgroundColor: '#7C3AED', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   backButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
+  splitLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  splitHint: { fontSize: 11, color: '#7C3AED', fontStyle: 'italic' },
 });

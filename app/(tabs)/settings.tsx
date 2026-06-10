@@ -79,7 +79,24 @@ if (!activeGroup) {
                 {index > 0 && <View style={styles.divider} />}
                 <TouchableOpacity
                   style={[styles.row, currentUserId === person.id && styles.rowActive]}
-                  onPress={() => setCurrentUserId(person.id)}
+                  onPress={async () => {
+                    await setCurrentUserId(person.id);
+                    Alert.alert(
+                      `You're ${person.name}!`,
+                      'What would you like to do next?',
+                      [
+                        {
+                          text: 'Add an Expense',
+                          onPress: () => router.push('/expense/new'),
+                        },
+                        {
+                          text: 'Go to Home',
+                          onPress: () => router.push('/home'),
+                        },
+                        { text: 'Stay Here', style: 'cancel' },
+                      ]
+                    );
+                  }}
                 >
                   <View style={[styles.dot, { backgroundColor: person.color }]} />
                   <Text style={styles.rowText}>{person.name}</Text>

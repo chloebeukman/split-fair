@@ -170,7 +170,10 @@ const handleSave = async () => {
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.splitLabel}>Split between:</Text>
+            <View style={styles.splitLabelRow}>
+              <Text style={styles.splitLabel}>Split between:</Text>
+              <Text style={styles.splitHint}>Tap to remove</Text>
+            </View>            
             <View style={styles.peopleRow}>
               {people.map((person: any) => {
                 const selected = item.splitBetween.includes(person.id);
@@ -277,7 +280,9 @@ const styles = StyleSheet.create({
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   currencyLabel: { color: '#888', fontSize: 16 },
   amountInput: { width: 90, marginBottom: 0 },
-  splitLabel: { fontSize: 12, color: '#888', marginBottom: 8 },
+  splitLabel: { fontSize: 12, color: '#888' },
+  splitLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  splitHint: { fontSize: 11, color: '#7C3AED', fontStyle: 'italic' },
   peopleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   personChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
   chipDot: { width: 8, height: 8, borderRadius: 4 },
