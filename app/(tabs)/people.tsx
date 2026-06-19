@@ -1,13 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AppModal, { ModalButton } from '../../components/AppModal';
 import { useApp } from '../../context/AppContext';
 
 export default function PeopleScreen() {
   const { activeGroup, addPerson, removePerson } = useApp();
   const router = useRouter();
   const [name, setName] = useState('');
+  const [modal, setModal] = useState<{ visible: boolean; title: string; message?: string; buttons: ModalButton[]; icon?: string; iconColor?: string }>({
+    visible: false, title: '', buttons: [],
+  });
+
+  const showModal = (title: string, message: string, buttons: ModalButton[], icon?: string, iconColor?: string) => {
+    setModal({ visible: true, title, message, buttons, icon, iconColor });
+  };
 
   const people = activeGroup?.people ?? [];
 
@@ -15,7 +23,7 @@ export default function PeopleScreen() {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (people.find(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      Alert.alert('Duplicate', 'Someone with that name is already in the group.');
+      showModal('Duplicate', 'Someone with that name is already in the group.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
       return;
     }
     addPerson(trimmed);
@@ -23,17 +31,19 @@ export default function PeopleScreen() {
   };
 
   const handleRemove = (id: string, personName: string) => {
-    Alert.alert(
+    showModal(
       'Remove Person',
       `Remove ${personName} from the group? This won't affect existing expenses.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Remove', style: 'destructive', onPress: () => removePerson(id) },
-      ]
+      ],
+      'person-remove-outline',
+      '#FF6B6B'
     );
   };
 
-if (!activeGroup) {
+  if (!activeGroup) {
     return (
       <View style={styles.container}>
         <View style={styles.scroll}>
@@ -59,7 +69,6 @@ if (!activeGroup) {
         <Text style={styles.title}>People</Text>
         <Text style={styles.subtitle}>Add everyone splitting expenses in {activeGroup.name}</Text>
 
-        {/* Add Person Input */}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
@@ -75,7 +84,6 @@ if (!activeGroup) {
           </TouchableOpacity>
         </View>
 
-        {/* People List */}
         {people.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="people-outline" size={48} color="#444" />
@@ -124,6 +132,16 @@ if (!activeGroup) {
         )}
 
       </ScrollView>
+
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={modal.buttons}
+        icon={modal.icon}
+        iconColor={modal.iconColor}
+        onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }
@@ -136,49 +154,27 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   input: {
     flex: 1, backgroundColor: '#16213e', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 14,
-    color: 'white', fontSize: 16,
+    paddingHorizontal: 16, paddingVertical: 14, color: 'white', fontSize: 16,
   },
   addButton: {
     backgroundColor: '#7C3AED', borderRadius: 12,
     width: 52, justifyContent: 'center', alignItems: 'center',
   },
   card: { backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginBottom: 24 },
-  personRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: 12, gap: 12,
-  },
+  personRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 12, gap: 12 },
   dot: { width: 14, height: 14, borderRadius: 7 },
   personName: { flex: 1, color: 'white', fontSize: 16 },
   divider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 12 },
-  emptyCard: {
-    backgroundColor: '#16213e', borderRadius: 16, padding: 40,
-    alignItems: 'center', gap: 8, marginBottom: 24,
-  },
+  emptyCard: { backgroundColor: '#16213e', borderRadius: 16, padding: 40, alignItems: 'center', gap: 8, marginBottom: 24 },
   emptyText: { color: '#888', fontSize: 16, marginTop: 8 },
   emptyHint: { color: '#555', fontSize: 13 },
   tip: { color: '#555', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  nextSteps: {
-    backgroundColor: '#16213e', borderRadius: 16,
-    padding: 8, marginTop: 16,
-  },
-  nextStepsTitle: {
-    fontSize: 14, fontWeight: '600', color: '#888',
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
-  },
-  nextStepButton: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 12, padding: 16,
-  },
+  nextSteps: { backgroundColor: '#16213e', borderRadius: 16, padding: 8, marginTop: 16 },
+  nextStepsTitle: { fontSize: 14, fontWeight: '600', color: '#888', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  nextStepButton: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   nextStepText: { flex: 1, color: 'white', fontSize: 15 },
   nextStepDivider: { height: 1, backgroundColor: '#ffffff10', marginHorizontal: 16 },
-
-  createButton: {
-    marginTop: 12, backgroundColor: '#7C3AED',
-    borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
-  },
+  createButton: { marginTop: 12, backgroundColor: '#7C3AED', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   createButtonText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  centeredEmpty: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20,
-  },
+  centeredEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
 });

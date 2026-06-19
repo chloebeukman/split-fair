@@ -1,11 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppModal, { ModalButton } from '../../components/AppModal';
 import { CURRENCY_SYMBOLS, useApp } from '../../context/AppContext';
 
 export default function ExpensesScreen() {
   const { activeGroup, removeExpense } = useApp();
   const router = useRouter();
+  const [modal, setModal] = useState<{ visible: boolean; title: string; message?: string; buttons: ModalButton[]; icon?: string; iconColor?: string }>({
+    visible: false, title: '', buttons: [],
+  });
+
+  const showModal = (title: string, message: string, buttons: ModalButton[], icon?: string, iconColor?: string) => {
+    setModal({ visible: true, title, message, buttons, icon, iconColor });
+  };
 
 if (!activeGroup) {
     return (
@@ -31,13 +40,15 @@ if (!activeGroup) {
   const sym = CURRENCY_SYMBOLS[currency];
 
   const handleRemove = (id: string, title: string) => {
-    Alert.alert(
+    showModal(
       'Delete Expense',
       `Delete "${title}"? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => removeExpense(id) },
-      ]
+      ],
+      'trash-outline',
+      '#FF6B6B'
     );
   };
 
@@ -124,6 +135,15 @@ if (!activeGroup) {
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/expense/new')}>
         <Ionicons name="add" size={32} color="white" />
       </TouchableOpacity>
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={modal.buttons}
+        icon={modal.icon}
+        iconColor={modal.iconColor}
+        onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }

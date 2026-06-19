@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppModal, { ModalButton } from '../../components/AppModal';
 import { CURRENCY_SYMBOLS, Currency, useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 
@@ -13,6 +15,13 @@ export default function SettingsScreen() {
     setIsGuest
   } = useApp();
   const router = useRouter();
+  const [modal, setModal] = useState<{ visible: boolean; title: string; message?: string; buttons: ModalButton[]; icon?: string; iconColor?: string }>({
+    visible: false, title: '', buttons: [],
+  });
+
+  const showModal = (title: string, message: string, buttons: ModalButton[], icon?: string, iconColor?: string) => {
+    setModal({ visible: true, title, message, buttons, icon, iconColor });
+  };
 
   const currencies: Currency[] = ['ZAR', 'USD', 'EUR', 'GBP'];
 
@@ -39,7 +48,7 @@ if (!activeGroup) {
   const { people, currentUserId, currency } = activeGroup;
 
   const handleSignOut = () => {
-    Alert.alert(
+    showModal(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
@@ -52,7 +61,9 @@ if (!activeGroup) {
             await supabase.auth.signOut();
           },
         },
-      ]
+      ],
+      'log-out-outline',
+      '#FF6B6B'
     );
   };
 
@@ -81,20 +92,16 @@ if (!activeGroup) {
                   style={[styles.row, currentUserId === person.id && styles.rowActive]}
                   onPress={async () => {
                     await setCurrentUserId(person.id);
-                    Alert.alert(
+                    showModal(
                       `You're ${person.name}!`,
                       'What would you like to do next?',
                       [
-                        {
-                          text: 'Add an Expense',
-                          onPress: () => router.push('/expense/new'),
-                        },
-                        {
-                          text: 'Go to Home',
-                          onPress: () => router.push('/home'),
-                        },
+                        { text: 'Add an Expense', onPress: () => router.push('/expense/new') },
+                        { text: 'Go to Home', onPress: () => router.push('/home') },
                         { text: 'Stay Here', style: 'cancel' },
-                      ]
+                      ],
+                      'checkmark-circle-outline',
+                      '#4ECDC4'
                     );
                   }}
                 >
@@ -146,13 +153,15 @@ if (!activeGroup) {
           <TouchableOpacity
             style={styles.row}
             onPress={() => {
-              Alert.alert(
+              showModal(
                 'Reset Group',
                 `This will delete all people and expenses in "${activeGroup.name}". This cannot be undone.`,
                 [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Reset', style: 'destructive', onPress: resetActiveGroup },
-                ]
+                ],
+                'warning-outline',
+                '#FF6B6B'
               );
             }}
           >
@@ -167,6 +176,17 @@ if (!activeGroup) {
         </View>
 
       </ScrollView>
+
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={modal.buttons}
+        icon={modal.icon}
+        iconColor={modal.iconColor}
+        onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+      />
+      
     </View>
   );
 }

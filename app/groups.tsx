@@ -1,12 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AppModal, { ModalButton } from '../components/AppModal';
 import { useApp } from '../context/AppContext';
 
 export default function GroupsScreen() {
   const { groups, activeGroupId, addGroup, removeGroup, renameGroup, setActiveGroupId } = useApp();
   const router = useRouter();
+  const [modal, setModal] = useState<{ visible: boolean; title: string; message?: string; buttons: ModalButton[]; icon?: string; iconColor?: string }>({
+    visible: false, title: '', buttons: [],
+  });
+
+  const showModal = (title: string, message: string, buttons: ModalButton[], icon?: string, iconColor?: string) => {
+    setModal({ visible: true, title, message, buttons, icon, iconColor });
+  };
   const [newGroupName, setNewGroupName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -15,36 +23,37 @@ export default function GroupsScreen() {
     const trimmed = newGroupName.trim();
     if (!trimmed) return;
     if (groups.find(g => g.name.toLowerCase() === trimmed.toLowerCase())) {
-      Alert.alert('Duplicate', 'A group with that name already exists.');
-      return;
-    }
+        showModal('Duplicate', 'A group with that name already exists.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
+        return;
+      }
     addGroup(trimmed);
     setNewGroupName('');
-    Alert.alert(
+    showModal(
       'Group Created!',
       `"${trimmed}" is ready. Add people to get started.`,
       [
-        {
-          text: 'Add People',
-          onPress: () => router.replace('/people'),
-        },
+        { text: 'Add People', onPress: () => router.replace('/people') },
         { text: 'Later', style: 'cancel' },
-      ]
+      ],
+      'people-outline',
+      '#4ECDC4'
     );
   };
 
   const handleRemove = (id: string, name: string) => {
     if (groups.length === 1) {
-      Alert.alert('Cannot delete', 'You need at least one group.');
+      showModal('Cannot delete', 'You need at least one group.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
       return;
     }
-    Alert.alert(
+    showModal(
       'Delete Group',
       `Delete "${name}" and all its people and expenses? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => removeGroup(id) },
-      ]
+      ],
+      'trash-outline',
+      '#FF6B6B'
     );
   };
 
@@ -161,6 +170,15 @@ export default function GroupsScreen() {
         </View>
 
       </ScrollView>
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={modal.buttons}
+        icon={modal.icon}
+        iconColor={modal.iconColor}
+        onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }

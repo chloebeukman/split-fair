@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AppModal, { ModalButton } from '../../components/AppModal';
 import { CURRENCY_SYMBOLS, ExpenseItem, useApp } from '../../context/AppContext';
 
 export default function NewExpenseScreen() {
@@ -54,6 +55,12 @@ function newItem(splitBetween: string[]): ExpenseItem {
 
 function NewExpenseForm({ people, sym, addExpense, router }: any) {
   const [title, setTitle] = useState('');
+  const [modal, setModal] = useState<{ visible: boolean; title: string; message?: string; buttons: ModalButton[]; icon?: string; iconColor?: string }>({
+  visible: false, title: '', buttons: [],
+});
+    const showModal = (title: string, message: string, buttons: ModalButton[], icon?: string, iconColor?: string) => {
+  setModal({ visible: true, title, message, buttons, icon, iconColor });
+};
   const [tipPercent, setTipPercent] = useState(0);
   const [customTip, setCustomTip] = useState('');
   const [showCustomTip, setShowCustomTip] = useState(false);
@@ -97,15 +104,15 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Missing title', 'Please enter a name for this expense.');
+      showModal('Missing title', 'Please enter a name for this expense.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
       return;
     }
     if (subtotal <= 0) {
-      Alert.alert('Missing amount', 'Please enter an amount for at least one item.');
+      showModal('Missing amount', 'Please enter an amount for at least one item.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
       return;
     }
     if (!paidById) {
-      Alert.alert('Missing payer', 'Please select who paid.');
+      showModal('Missing payer', 'Please select who paid.', [{ text: 'OK' }], 'alert-circle-outline', '#FF6B6B');
       return;
     }
 
@@ -116,25 +123,19 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
       paidById,
       date: new Date().toISOString(),
     });
-    Alert.alert(
-        'Expense Added! ✓',
-        'What would you like to do next?',
-        [
-          {
-            text: 'Settle Up',
-            onPress: () => router.replace('/settle'),
-          },
-          {
-            text: 'Add Another',
-            onPress: () => router.replace('/expense/new'),
-          },
-          {
-            text: 'Done',
-            onPress: () => router.replace('/home'),
-          },
-        ]
-      );
-    };
+
+    showModal(
+      'Expense Added! ✓',
+      'What would you like to do next?',
+      [
+        { text: 'Settle Up', onPress: () => router.replace('/settle') },
+        { text: 'Add Another', onPress: () => router.replace('/expense/new') },
+        { text: 'Done', style: 'cancel', onPress: () => router.replace('/home') },
+      ],
+      'checkmark-circle-outline',
+      '#4ECDC4'
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -271,6 +272,16 @@ function NewExpenseForm({ people, sym, addExpense, router }: any) {
         </View>
 
       </ScrollView>
+
+      <AppModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        buttons={modal.buttons}
+        icon={modal.icon}
+        iconColor={modal.iconColor}
+        onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+      />
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
